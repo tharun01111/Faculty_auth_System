@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import { login, register } from "./controllers/userController.js";
 import connectDb from "./config/db.js";
 import User from "./models/Employee.js";
+import { adminLogin, adminRegister } from "./controllers/adminController.js";
 dotenv.config();
 
 const app = express();
@@ -12,8 +13,11 @@ app.use(cors());
 app.use(express.json());
 connectDb();
 
-app.post("/auth/login", login);
-app.post("/auth/register", register);
+app.post("/faculty/login", login);
+app.post("/faculty/register", register);
+
+app.post("/admin/register", adminRegister);
+app.post("/admin/login", adminLogin);
 
 app.get("/api/users/test", async (req, res) => {
   const user = await User.find();

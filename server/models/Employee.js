@@ -38,8 +38,6 @@ const facultySchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "admin",
-    required: true,
-    default: "admin",
   },
 });
 
