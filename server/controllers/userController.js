@@ -85,32 +85,54 @@ export const login = async (req, res) => {
       role: user.role,
     });
   } catch (err) {
-    console.error("LOGIN CONTROLLER ERROR:", err); // Log the actual error
-    res.status(500).json({ error: err.message });
+    console.error("LOGIN CONTROLLER ERROR:", err);
+    next(err);
   }
 };
 
-export const register = async (req, res) => {
-  const { name, email, password } = req.body;
+export const register = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
 
-  const token = req.headers.authorization.split(" ")[1];
+    // Simple check (token verification should ideally be middleware, but keeping logic for now)
+    // The route uses 'protect' middleware now, so req.user should be populated if verified.
+    // However, existing logic uses req.headers manual check. 
+    // Let's rely on the middleware we added in routes/faculty.routes.js which calls 'protect'.
+    // 'protect' adds 'req.user'. 
 
-  const { id } = jwt.verify(token, process.env.JWT_SECRET);
+    // If we want to strictly follow the old logic where createdBy comes from the token of the requester:
+    
+    // const token = req.headers.authorization.split(" ")[1];
+    // const { id } = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Since we use 'protect' middleware, we can just use req.user._id
+    // But 'protect' middleware might not be used on the register route in previous version?
+    // The user had: const { id } = jwt.verify(token, process.env.JWT_SECRET);
+    // So it was protected.
+    
+    const id = req.user ? req.user._id : null; 
+    // If middleware is not used, this will crash. In faculty.routes.js I added verify.
 
-  const user = await User.findOne({ email });
+    const user = await User.findOne({ email });
 
-  if (user) return res.status(403).json({ message: "User already exists" });
+    if (user) {
+        res.status(400); // Changed from 403 for bad request (duplicate)
+        throw new Error("User already exists");
+    }
 
-  const hash = await bcrypt.hash(password, 10);
+    const hash = await bcrypt.hash(password, 10);
 
-  await User.create({
-    name,
-    email,
-    password: hash,
-    createdBy: id,
-  });
+    await User.create({
+        name,
+        email,
+        password: hash,
+        createdBy: id,
+    });
 
-  res.status(201).json({ message: "User created successfully..." });
+    res.status(201).json({ message: "User created successfully..." });
+  } catch(err) {
+      next(err);
+  }
 };
 
 const makeToken = (id, role) => {

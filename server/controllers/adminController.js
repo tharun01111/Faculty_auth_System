@@ -2,17 +2,21 @@ import Admin from "../models/Admin.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-export const adminRegister = async (req, res) => {
+export const adminRegister = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!email || !password || !name)
-      return res.status().json({ message: "All fields are requierd..." });
+    if (!email || !password || !name) {
+      res.status(400);
+      throw new Error("All fields are required...");
+    }
 
     const admin = await Admin.findOne({ email });
 
-    if (admin)
-      return res.status(400).json({ message: "Admin already exists..." });
+    if (admin) {
+      res.status(400);
+      throw new Error("Admin already exists...");
+    }
 
     const hash = await bcrypt.hash(password, 10);
 
@@ -20,33 +24,44 @@ export const adminRegister = async (req, res) => {
       name,
       email,
       password: hash,
+      // createdBy? Admin model usually self-registered or seeded.
     });
 
     res.status(201).json({ message: "Successfully created an admin..." });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
 
-export const adminLogin = async (req, res) => {
-  const { email, password } = req.body;
+export const adminLogin = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
 
-  if (!email || !password)
-    return res.status(400).json({ message: "All fields are required..." });
+    if (!email || !password) {
+      res.status(400);
+      throw new Error("All fields are required...");
+    }
 
-  const admin = await Admin.findOne({ email });
+    const admin = await Admin.findOne({ email });
 
-  if (!admin)
-    return res.status(400).json({ message: "Admin does not exist..." });
+    if (!admin) {
+      res.status(400);
+      throw new Error("Admin does not exist...");
+    }
 
-  const check = await bcrypt.compare(password, admin.password);
+    const check = await bcrypt.compare(password, admin.password);
 
-  if (!check)
-    return res.status(400).json({ message: "Invalid credentials..." });
+    if (!check) {
+      res.status(400);
+      throw new Error("Invalid credentials...");
+    }
 
-  const token = await makeToken(admin);
+    const token = await makeToken(admin);
 
-  res.status(200).json({ message: "Successfully logged in", token, role: "admin" });
+    res.status(200).json({ message: "Successfully logged in", token, role: "admin" });
+  } catch (err) {
+    next(err);
+  }
 };
 
 const makeToken = async (admin) => {
