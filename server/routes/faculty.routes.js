@@ -1,14 +1,16 @@
 import express from "express";
 import { login, register } from "../controllers/userController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, facultyOnly, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+// Public: Faculty login
 router.post("/login", login);
-router.post("/register", protect, register); // Protecting register to only allow existing users/admins to create new faculty? 
-// Original code had:
-// const token = req.headers.authorization.split(" ")[1];
-// const { id } = jwt.verify(token, process.env.JWT_SECRET);
-// This implies registration is protected.
+
+// Admin-only: Only admins can register new faculty (prevents self-registration)
+router.post("/register", protect, adminOnly, register);
+
+// Protected example: Any future faculty-only endpoint follows this pattern:
+// router.get("/profile", protect, facultyOnly, getFacultyProfile);
 
 export default router;

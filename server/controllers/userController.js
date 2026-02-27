@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 
 const MAX_ATTEMPTS = 3;
 
-export const login = async (req, res) => {
+export const login = async (req, res, next) => {
   try {
     console.log("LOGIN INTENT:", req.body);
     const { email, password } = req.body;
@@ -71,7 +71,9 @@ export const login = async (req, res) => {
     user.isLocked = false;
     await user.save();
 
-    const token = makeToken(user._id, user.role);
+    // ✅ Normalize: always issue JWT with canonical role "faculty"
+    const canonicalRole = "faculty";
+    const token = makeToken(user._id, canonicalRole);
 
     try {
       await logAttempt(user, "SUCCESS", ipAddress, userAgent);
@@ -82,7 +84,7 @@ export const login = async (req, res) => {
     res.status(200).json({
       message: "Login successful",
       token,
-      role: user.role,
+      role: canonicalRole, // ✅ Always "faculty" — not the raw DB value
     });
   } catch (err) {
     console.error("LOGIN CONTROLLER ERROR:", err);

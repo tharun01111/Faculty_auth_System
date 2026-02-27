@@ -1,12 +1,14 @@
 import { Navigate } from "react-router-dom";
-import useAuth from "../auth/useAuth";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+import Loading from "../components/Loading";
 
 function ProtectedRoute({ children, requiredRole }) {
-  const { loading, isAuth, role } = useAuth();
+  const { loading, isAuth, role } = useContext(AuthContext);
 
   //  Wait until auth restore finishes
   if (loading) {
-    return null; 
+    return <Loading />;
   }
 
   if (!isAuth) {

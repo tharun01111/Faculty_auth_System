@@ -1,40 +1,28 @@
-import React, { useEffect, useState } from "react";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+import Loading from "../components/Loading";
 
+/**
+ * AuthBoundary — Phase 6 outer wrapper
+ *
+ * Sits between <AuthProvider> and <Routes>.
+ * Holds rendering until AuthContext has finished rehydrating
+ * from sessionStorage (the `loading` flag).
+ *
+ * WHY THIS EXISTS:
+ * Without this, routes render before auth state is known.
+ * That causes a flash where ProtectedRoute briefly sees
+ * isAuth=false and redirects to /login — even for valid sessions.
+ */
 const AuthBoundary = ({ children }) => {
-  const [authStatus, setAuthStatus] = useState("unknown");
-  const [userRole, setUserRole] = useState(null);
+  const { loading } = useContext(AuthContext);
 
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const token = sessionStorage.getItem("token");
-      const role = sessionStorage.getItem("role");
-
-      if (token && role) {
-        setAuthStatus("authenticated");
-        setUserRole(role);
-      } else {
-        setAuthStatus("unauthenticated");
-        setUserRole(null);
-      }
-    };
-    window.addEventListener("storage", handleStorageChange);
-
-    // Also listen for custom event (from Login.jsx)
-    window.addEventListener("authUpdated", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("authUpdated", handleStorageChange);
-    };
-  }, []);
-
-  if (authStatus === "unknown") {
-    return (
-      <div style={{ textAlign: "center", marginTop: "40vh" }}>Loading...</div>
-    );
+  // ✅ Block all routing until auth state is restored from sessionStorage
+  if (loading) {
+    return <Loading />;
   }
 
-  return children({ authStatus, userRole });
+  return children;
 };
 
 export default AuthBoundary;

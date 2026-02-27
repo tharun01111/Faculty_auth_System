@@ -10,33 +10,54 @@ export const protect = async (req, res, next) => {
     req.headers.authorization.startsWith("Bearer")
   ) {
     try {
-      // Get token from header
       token = req.headers.authorization.split(" ")[1];
 
-      // Verify token
+      // ✅ Decode and verify. JWT is the source of truth for role.
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Get user from the token
-      // Check both collections? Or decide based on role in token?
-      // For now, simpler to just pass the IDs and allow controllers to handle specific logic if needed
-      // But usually we want req.user to be populated.
-      
+      // Look up user in DB for existence check (revocation-ready)
       let user = await User.findById(decoded.id).select("-password");
       if (!user) {
-         user = await Admin.findById(decoded.id).select("-password");
+        user = await Admin.findById(decoded.id).select("-password");
+        if (user) {
+          user = user.toObject();
+        }
       }
 
+      if (!user) {
+        return res.status(401).json({ message: "Not authorized, user not found" });
+      }
+
+      // ✅ Role comes from JWT payload — never trusted from request body
+      user.role = decoded.role;
       req.user = user;
       next();
     } catch (error) {
-      console.error(error);
-      res.status(401);
-      throw new Error("Not authorized");
+      console.error("Auth middleware error:", error.message);
+      return res.status(401).json({ message: "Not authorized, invalid token" });
     }
+    return;
   }
 
   if (!token) {
-    res.status(401);
-    throw new Error("Not authorized, no token");
+    return res.status(401).json({ message: "Not authorized, no token" });
+  }
+};
+
+// ✅ Admin-only gate — 403 if role is not admin
+export const adminOnly = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    next();
+  } else {
+    return res.status(403).json({ message: "Forbidden: Admin access required" });
+  }
+};
+
+// ✅ Faculty-only gate — 403 if role is not faculty (Phase 10 scalability)
+export const facultyOnly = (req, res, next) => {
+  if (req.user && req.user.role === "faculty") {
+    next();
+  } else {
+    return res.status(403).json({ message: "Forbidden: Faculty access required" });
   }
 };

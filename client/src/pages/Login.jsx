@@ -16,47 +16,35 @@ const Login = ({ expectedRole }) => {
   const { login } = useContext(AuthContext);
 
   const handleLogin = async (e) => {
-    e.preventDefault(); // allow form submission
+    e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const res = await api.post(
-        `${import.meta.env.VITE_SERVER_URL}/${expectedRole}/login`,
-        { email, password },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      // ✅ Relative path — api.js already has baseURL set from VITE_SERVER_URL
+      const res = await api.post(`/${expectedRole}/login`, { email, password });
 
       const { token, role } = res.data;
 
-      console.log("LOGIN SUCCESS:", { role, expectedRole });
-
-      // ROLE VALIDATION
-      const isAuthorized =
-        role === expectedRole || (expectedRole === "faculty" && role === "user");
-
-      if (!isAuthorized) {
+      // ✅ ROLE VALIDATION — Frontend enforces portal separation
+      // This catches: admin logging into faculty portal, or vice versa
+      if (role !== expectedRole) {
         setError("You are not authorized for this portal.");
-        setLoading(false); 
         return;
       }
 
-      // ✅ Update auth context
+      // ✅ Store auth state in context (persisted via sessionStorage internally)
       login(token, role);
 
-      // ✅ Redirect
+      // ✅ Navigate to the correct role dashboard
       navigate(`/${expectedRole}/dashboard`);
     } catch (err) {
       const message =
         err.response?.data?.message || err.message || "Login failed";
-
       setError(message);
     } finally {
-      if (!error) setLoading(false); 
+      // ✅ Always reset loading — regardless of success or error
+      setLoading(false);
     }
   };
 

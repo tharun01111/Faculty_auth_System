@@ -23,14 +23,21 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
+    const originalRequest = error.config;
 
-    if (status === 401 || status === 403) {
-      // 🔐 Force logout
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("role");
+    // Do not intercept login requests — prevent redirect loop
+    const isLoginRequest = originalRequest?.url?.includes("/login");
 
-      // Re-enter auth flow
-      window.location.href = "/login";
+    if (!isLoginRequest) {
+      if (status === 401) {
+        // ✅ Token expired or invalid — clear session, return to login
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("role");
+        window.location.href = "/login";
+      } else if (status === 403) {
+        // ✅ Valid token but insufficient role — go to unauthorized page
+        window.location.href = "/unauthorized";
+      }
     }
 
     return Promise.reject(error);

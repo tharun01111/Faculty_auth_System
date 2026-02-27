@@ -17,7 +17,7 @@ const facultySchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
-    default: "user",
+    default: "faculty", // ✅ Canonical role name — matches JWT, middleware, and frontend
   },
   isLocked: {
     type: Boolean,
