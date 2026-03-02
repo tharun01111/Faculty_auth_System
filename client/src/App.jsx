@@ -12,11 +12,6 @@ import FacultyManagement from "./pages/FacultyManagement.jsx";
 import FacultyDashboard from "./pages/FacultyDashboard.jsx";
 import Unauthorized from "./pages/Unauthorized.jsx";
 
-/**
- * Role → Dashboard mapping (Phase 6 & 10)
- * To add a new role: add an entry here + a new protected route below.
- * No other changes needed.
- */
 const roleRedirect = {
   admin: "/admin/dashboard",
   faculty: "/faculty/dashboard",
@@ -30,7 +25,6 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Root resolver — sends authenticated users to their dashboard */}
       <Route
         path="/"
         element={
@@ -42,7 +36,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Phase 4 — Portal Selector (PUBLIC ONLY) */}
       <Route
         path="/login"
         element={
@@ -52,7 +45,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Phase 4 — Admin Login (PUBLIC ONLY) */}
       <Route
         path="/admin/login"
         element={
@@ -62,7 +54,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Phase 4 — Faculty Login (PUBLIC ONLY) */}
       <Route
         path="/faculty/login"
         element={
@@ -72,21 +63,17 @@ function AppRoutes() {
         }
       />
 
-      {/* Phase 9 — Unauthorized page */}
       <Route path="/unauthorized" element={<Unauthorized />} />
 
-      {/* Phase 6 — Admin Protected Section */}
       <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/faculty" element={<FacultyManagement />} />
       </Route>
 
-      {/* Phase 6 — Faculty Protected Section */}
       <Route element={<ProtectedRoute allowedRoles={["faculty"]} />}>
         <Route path="/faculty/dashboard" element={<FacultyDashboard />} />
       </Route>
 
-      {/* Fallback — unknown routes go to root resolver */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -96,11 +83,6 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        {/*
-          Phase 6 — AuthBoundary sits between AuthProvider and Routes.
-          Prevents routing until auth state is rehydrated from sessionStorage.
-          Eliminates the flash-redirect-to-login for authenticated users.
-        */}
         <AuthBoundary>
           <AppRoutes />
         </AuthBoundary>

@@ -1,48 +1,189 @@
-import React from "react";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 import LogoutButton from "../components/LogoutButton";
-import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import ThemeToggle from "../components/ThemeToggle";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "../components/ui/card";
+import {
+  CalendarDays,
+  Users,
+  FileBarChart2,
+  BookOpen,
+  Bell,
+  ClipboardList,
+  GraduationCap,
+  LayoutDashboard,
+} from "lucide-react";
+
+const actionCards = [
+  {
+    icon: CalendarDays,
+    title: "My Schedule",
+    description: "View today's classes and weekly timetable.",
+    color: "text-indigo-500",
+    bg: "bg-indigo-500/10",
+  },
+  {
+    icon: Users,
+    title: "Students",
+    description: "Browse and manage your assigned students.",
+    color: "text-sky-500",
+    bg: "bg-sky-500/10",
+  },
+  {
+    icon: FileBarChart2,
+    title: "Reports",
+    description: "Generate and download performance reports.",
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10",
+  },
+  {
+    icon: BookOpen,
+    title: "Courses",
+    description: "Manage your course materials and syllabi.",
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
+  },
+  {
+    icon: ClipboardList,
+    title: "Attendance",
+    description: "Record and review student attendance.",
+    color: "text-rose-500",
+    bg: "bg-rose-500/10",
+  },
+  {
+    icon: Bell,
+    title: "Announcements",
+    description: "Post updates and notices for students.",
+    color: "text-violet-500",
+    bg: "bg-violet-500/10",
+  },
+];
 
 const FacultyDashboard = () => {
+  const { role } = useContext(AuthContext);
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-4xl">
-        <header className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Faculty Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back to the portal.</p>
+    <div className="min-h-screen bg-background">
+      {/* ── Top Nav ── */}
+      <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <GraduationCap className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Faculty Portal
+              </p>
+              <h1 className="text-sm font-bold leading-tight tracking-tight text-foreground sm:text-base">
+                Dashboard
+              </h1>
+            </div>
           </div>
-          <LogoutButton />
-        </header>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LogoutButton />
+          </div>
+        </div>
+      </header>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Schedule</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">No classes scheduled for today.</p>
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        {/* ── Greeting ── */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2">
+            <LayoutDashboard className="h-5 w-5 text-primary" />
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">
+              Welcome back
+            </h2>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Here is your faculty portal overview for today.
+          </p>
+        </div>
+
+        {/* ── Quick Stats ── */}
+        <div className="mb-8 grid gap-4 sm:grid-cols-3">
+          <Card className="border-border bg-card">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
+                <CalendarDays className="h-5 w-5 text-indigo-500" />
+              </span>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Today's Classes</p>
+                <p className="text-2xl font-bold text-foreground">0</p>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Students</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">View and manage student details.</p>
+          <Card className="border-border bg-card">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10">
+                <Users className="h-5 w-5 text-sky-500" />
+              </span>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Total Students</p>
+                <p className="text-2xl font-bold text-foreground">—</p>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Reports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Generate performance reports.</p>
+          <Card className="border-border bg-card">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
+                <FileBarChart2 className="h-5 w-5 text-emerald-500" />
+              </span>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Pending Reports</p>
+                <p className="text-2xl font-bold text-foreground">—</p>
+              </div>
             </CardContent>
           </Card>
         </div>
-      </div>
+
+        {/* ── Quick Actions ── */}
+        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Quick Actions
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {actionCards.map(({ icon: Icon, title, description, color, bg }) => (
+            <button
+              key={title}
+              className="group flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5"
+            >
+              <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg}`}>
+                <Icon className={`h-5 w-5 ${color}`} />
+              </span>
+              <div>
+                <p className="font-semibold text-foreground transition-colors group-hover:text-primary">
+                  {title}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* ── Notice ── */}
+        <div className="mt-10 rounded-xl border border-border bg-muted/40 p-5">
+          <div className="flex items-start gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Bell className="h-4 w-4 text-primary" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-foreground">No new announcements</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                You are all caught up. Check back later for updates from administration.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };

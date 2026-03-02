@@ -1,11 +1,38 @@
-import api from "../services/api.js";
-import React, { useState, useContext } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+import api from "../services/api.js";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Button } from "../components/ui/button";
+import ThemeToggle from "../components/ThemeToggle";
+import {
+  ShieldCheck,
+  GraduationCap,
+  Mail,
+  Lock,
+  ArrowLeft,
+  AlertCircle,
+  LogIn,
+  Loader2,
+} from "lucide-react";
+
+const roleConfig = {
+  admin: {
+    label: "Admin Portal",
+    icon: ShieldCheck,
+    iconClass: "text-indigo-500",
+    bg: "bg-indigo-500/10",
+    accent: "text-indigo-500",
+  },
+  faculty: {
+    label: "Faculty Portal",
+    icon: GraduationCap,
+    iconClass: "text-sky-500",
+    bg: "bg-sky-500/10",
+    accent: "text-sky-500",
+  },
+};
 
 const Login = ({ expectedRole }) => {
   const [email, setEmail] = useState("");
@@ -15,80 +42,126 @@ const Login = ({ expectedRole }) => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
+  const config = roleConfig[expectedRole] ?? roleConfig.faculty;
+  const Icon = config.icon;
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      // ✅ Relative path — api.js already has baseURL set from VITE_SERVER_URL
       const res = await api.post(`/${expectedRole}/login`, { email, password });
-
       const { token, role } = res.data;
 
-      // ✅ ROLE VALIDATION — Frontend enforces portal separation
-      // This catches: admin logging into faculty portal, or vice versa
       if (role !== expectedRole) {
         setError("You are not authorized for this portal.");
         return;
       }
 
-      // ✅ Store auth state in context (persisted via sessionStorage internally)
       login(token, role);
-
-      // ✅ Navigate to the correct role dashboard
       navigate(`/${expectedRole}/dashboard`);
     } catch (err) {
-      const message =
-        err.response?.data?.message || err.message || "Login failed";
+      const message = err.response?.data?.message || err.message || "Login failed";
       setError(message);
     } finally {
-      // ✅ Always reset loading — regardless of success or error
       setLoading(false);
     }
   };
 
-  const roleTitle = expectedRole === "admin" ? "Admin Portal" : "Faculty Portal";
-
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">{roleTitle}</CardTitle>
-          <CardDescription className="text-center">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4">
+      {/* Theme toggle pill — top right */}
+      <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+        <div className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 shadow-sm">
+          <span className="text-xs font-medium text-muted-foreground select-none">Theme</span>
+          <ThemeToggle />
+        </div>
+      </div>
+
+      {/* Back button — top left */}
+      <button
+        onClick={() => navigate("/login")}
+        className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground sm:left-6 sm:top-6"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Back
+      </button>
+
+      <div className="w-full max-w-sm">
+        {/* Role badge */}
+        <div className="mb-6 text-center">
+          <div className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${config.bg}`}>
+            <Icon className={`h-6 w-6 ${config.iconClass}`} />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            {config.label}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Enter your credentials to access the dashboard
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+        </div>
+
+        {/* Form card */}
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <form onSubmit={handleLogin} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="grid gap-1.5">
+              <Label htmlFor="email" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Mail className="h-3.5 w-3.5" /> Email
+              </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="you@college.edu"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="bg-background"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="password" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Lock className="h-3.5 w-3.5" /> Password
+              </Label>
               <Input
                 id="password"
                 type="password"
+                placeholder="••••••••"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="bg-background"
               />
             </div>
-            {error && <p className="text-sm font-medium text-destructive text-center">{error}</p>}
-            <Button className="w-full" type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
+
+            {error && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <Button className="w-full gap-2" type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4" />
+                  Sign In
+                </>
+              )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          © 2026 Faculty Auth System
+        </p>
+      </div>
     </div>
   );
 };
