@@ -10,6 +10,8 @@ import Login from "./pages/Login.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import FacultyManagement from "./pages/FacultyManagement.jsx";
 import FacultyDashboard from "./pages/FacultyDashboard.jsx";
+import RegisterFaculty from "./pages/RegisterFaculty.jsx";
+import SystemLogs from "./pages/SystemLogs.jsx";
 import Unauthorized from "./pages/Unauthorized.jsx";
 
 const roleRedirect = {
@@ -68,6 +70,8 @@ function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/faculty" element={<FacultyManagement />} />
+        <Route path="/admin/register-faculty" element={<RegisterFaculty />} />
+        <Route path="/admin/logs" element={<SystemLogs />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["faculty"]} />}>

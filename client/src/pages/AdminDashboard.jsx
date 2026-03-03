@@ -12,7 +12,7 @@ import {
   School,
   Users,
   HeartPulse,
-  Clock,
+  Activity,
   Lock,
   UnlockKeyhole,
   PlusCircle,
@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   TriangleAlert,
   LayoutDashboard,
+  UserCheck,
 } from "lucide-react";
 
 const StatCard = ({ icon: Icon, label, value, sub, iconClass, bgClass }) => (
@@ -78,8 +79,7 @@ const AdminDashboard = () => {
         const statsRes = await api.get("/admin/stats");
         setStats(statsRes.data);
 
-        const facultyRes = await api.get("/admin/faculty");
-        const locked = facultyRes.data.faculty.filter((f) => f.isLocked).length;
+        const locked = statsRes.data.lockedAccounts ?? 0;
         setLockedCount(locked);
       } catch (err) {
         setError("Failed to load dashboard data.");
@@ -152,20 +152,12 @@ const AdminDashboard = () => {
             bgClass="bg-indigo-500/10"
           />
           <StatCard
-            icon={HeartPulse}
-            label="System Health"
-            value={stats ? stats.systemHealth : "—"}
-            sub="All services operational"
+            icon={UserCheck}
+            label="Active Accounts"
+            value={stats ? stats.activeAccounts : "—"}
+            sub="Currently accessible"
             iconClass="text-emerald-500"
             bgClass="bg-emerald-500/10"
-          />
-          <StatCard
-            icon={Clock}
-            label="Pending Approvals"
-            value={stats ? stats.pendingApprovals : "—"}
-            sub="Awaiting review"
-            iconClass="text-amber-500"
-            bgClass="bg-amber-500/10"
           />
           <StatCard
             icon={Lock}
@@ -174,6 +166,14 @@ const AdminDashboard = () => {
             sub="Require admin unlock"
             iconClass={lockedCount > 0 ? "text-rose-500" : "text-muted-foreground"}
             bgClass={lockedCount > 0 ? "bg-rose-500/10" : "bg-muted"}
+          />
+          <StatCard
+            icon={Activity}
+            label="Logins (24h)"
+            value={stats ? stats.recentLogins : "—"}
+            sub="Successful in last 24h"
+            iconClass="text-sky-500"
+            bgClass="bg-sky-500/10"
           />
         </div>
 

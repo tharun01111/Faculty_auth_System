@@ -51,10 +51,13 @@ const Login = ({ expectedRole }) => {
     setLoading(true);
 
     try {
-      const res = await api.post(`/${expectedRole}/login`, { email, password });
+      const res = await api.post(`${expectedRole}/login`, { email, password });
       const { token, role } = res.data;
 
-      if (role !== expectedRole) {
+      const isAuthorized =
+        role === expectedRole || (expectedRole === "faculty" && role === "user");
+
+      if (!isAuthorized) {
         setError("You are not authorized for this portal.");
         return;
       }

@@ -7,7 +7,6 @@ const MAX_ATTEMPTS = 3;
 
 export const login = async (req, res, next) => {
   try {
-    console.log("LOGIN INTENT:", req.body);
     const { email, password } = req.body;
     const ipAddress = req.ip;
     const userAgent = req.headers["user-agent"] || "Unknown";
@@ -69,6 +68,7 @@ export const login = async (req, res, next) => {
     // Successful login
     user.failedLogin = 0;
     user.isLocked = false;
+    user.lastLogin = new Date();
     await user.save();
 
     // ✅ Normalize: always issue JWT with canonical role "faculty"
@@ -84,7 +84,8 @@ export const login = async (req, res, next) => {
     res.status(200).json({
       message: "Login successful",
       token,
-      role: canonicalRole, // ✅ Always "faculty" — not the raw DB value
+      role: canonicalRole,
+      lastLogin: user.lastLogin,
     });
   } catch (err) {
     console.error("LOGIN CONTROLLER ERROR:", err);

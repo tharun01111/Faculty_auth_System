@@ -1,5 +1,6 @@
 import Admin from "../models/Admin.js";
 import User from "../models/Employee.js"; // Faculty model
+import Logs from "../models/LoginLog.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -25,7 +26,6 @@ export const adminRegister = async (req, res, next) => {
       name,
       email,
       password: hash,
-      // createdBy? Admin model usually self-registered or seeded.
     });
 
     res.status(201).json({ message: "Successfully created an admin..." });
@@ -65,35 +65,51 @@ export const adminLogin = async (req, res, next) => {
   }
 };
 
-
 const makeToken = async (admin) => {
   const token = jwt.sign(
-    { id: admin._id, role: "admin" }, // ✅ lowercase — matches middleware & frontend
+    { id: admin._id, role: "admin" },
     process.env.JWT_SECRET,
     { expiresIn: "1d" },
   );
   return token;
 };
 
-export const getAdminStats = async (req, res) => {
-    // This is a protected route. If we are here, it means:
-    // 1. Token is valid (protect middleware)
-    // 2. User is an admin (adminOnly middleware)
-    
-    res.status(200).json({
-        totalFaculty: 42,
-        systemHealth: "Good",
-        pendingApprovals: 5,
-        message: "Secure data fetched successfully"
+// ✅ GET /admin/stats — real counts from DB
+export const getAdminStats = async (req, res, next) => {
+  try {
+    const [totalFaculty, lockedAccounts, totalLogs] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ isLocked: true }),
+      Logs.countDocuments(),
+    ]);
+
+    const activeAccounts = totalFaculty - lockedAccounts;
+
+    // Last 24h login events
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentLogins = await Logs.countDocuments({
+      status: "SUCCESS",
+      createdAt: { $gte: since24h },
     });
+
+    res.status(200).json({
+      totalFaculty,
+      lockedAccounts,
+      activeAccounts,
+      recentLogins,
+      systemHealth: "Good",
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 // ✅ GET /admin/faculty — list all faculty (admin-only)
 export const getAllFaculty = async (req, res, next) => {
   try {
     const faculty = await User.find()
-      .select("-password") // Never expose passwords
-      .sort({ createdAt: -1 }); // Newest first
+      .select("-password")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({ faculty });
   } catch (err) {
@@ -128,6 +144,60 @@ export const unlockFaculty = async (req, res, next) => {
         email: faculty.email,
         isLocked: faculty.isLocked,
         failedLogin: faculty.failedLogin,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ✅ DELETE /admin/faculty/:id — remove a faculty account
+export const deleteFaculty = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const faculty = await User.findById(id);
+
+    if (!faculty) {
+      return res.status(404).json({ message: "Faculty not found" });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: `Faculty account for ${faculty.email} has been deleted`,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ✅ GET /admin/logs — paginated login audit logs
+export const getLoginLogs = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const statusFilter = req.query.status; // "SUCCESS" | "FAILURE" | undefined
+    const filter = statusFilter ? { status: statusFilter } : {};
+
+    const [logs, total] = await Promise.all([
+      Logs.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Logs.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      logs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (err) {
