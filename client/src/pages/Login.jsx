@@ -11,6 +11,8 @@ import {
   GraduationCap,
   Mail,
   Lock,
+  Eye,
+  EyeOff,
   ArrowLeft,
   AlertCircle,
   LogIn,
@@ -37,13 +39,20 @@ const roleConfig = {
 const Login = ({ expectedRole }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
+  const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
   const config = roleConfig[expectedRole] ?? roleConfig.faculty;
   const Icon = config.icon;
+
+  const triggerShake = () => {
+    setShake(true);
+    setTimeout(() => setShake(false), 600);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -52,25 +61,35 @@ const Login = ({ expectedRole }) => {
 
     try {
       const res = await api.post(`${expectedRole}/login`, { email, password });
-      const { token, role } = res.data;
+      const { token, role, lastLogin } = res.data;
 
       const isAuthorized =
         role === expectedRole || (expectedRole === "faculty" && role === "user");
 
       if (!isAuthorized) {
         setError("You are not authorized for this portal.");
+        triggerShake();
         return;
       }
 
-      login(token, role);
+      login(token, role, lastLogin);
       navigate(`/${expectedRole}/dashboard`);
     } catch (err) {
       const message = err.response?.data?.message || err.message || "Login failed";
       setError(message);
+      triggerShake();
     } finally {
       setLoading(false);
     }
   };
+
+  // Determine error banner style based on error type
+  const isLocked = error?.toLowerCase().includes("locked");
+  const isExpired = error?.toLowerCase().includes("expired");
+
+  const errorBannerClass = isLocked
+    ? "flex items-start gap-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400"
+    : "flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs text-destructive";
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4">
@@ -127,21 +146,43 @@ const Login = ({ expectedRole }) => {
               <Label htmlFor="password" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <Lock className="h-3.5 w-3.5" /> Password
               </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-background"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-background pr-10"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <div
+                className={`${errorBannerClass} ${shake ? "animate-shake" : ""}`}
+                style={
+                  shake
+                    ? { animation: "shake 0.5s cubic-bezier(.36,.07,.19,.97) both" }
+                    : {}
+                }
+              >
                 <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                {error}
+                <span>{error}</span>
               </div>
             )}
 
@@ -165,6 +206,16 @@ const Login = ({ expectedRole }) => {
           © 2026 Faculty Auth System
         </p>
       </div>
+
+      {/* Shake keyframe — injected inline since we can't modify global CSS here */}
+      <style>{`
+        @keyframes shake {
+          10%, 90% { transform: translateX(-2px); }
+          20%, 80% { transform: translateX(3px); }
+          30%, 50%, 70% { transform: translateX(-4px); }
+          40%, 60% { transform: translateX(4px); }
+        }
+      `}</style>
     </div>
   );
 };

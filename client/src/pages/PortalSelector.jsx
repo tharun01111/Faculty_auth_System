@@ -29,7 +29,39 @@ const PortalSelector = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 overflow-hidden">
+
+      {/* ── Decorative animated orbs ─────────────────────────────────────── */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10"
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: "15%",
+            left: "10%",
+            width: "340px",
+            height: "340px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)",
+            animation: "orbPulse 7s ease-in-out infinite",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: "10%",
+            right: "8%",
+            width: "280px",
+            height: "280px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(14,165,233,0.10) 0%, transparent 70%)",
+            animation: "orbPulse 9s ease-in-out infinite reverse",
+          }}
+        />
+      </div>
+
       {/* Theme toggle — top right, pill shaped */}
       <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
         <div className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 shadow-sm">
@@ -75,10 +107,25 @@ const PortalSelector = () => {
           ))}
         </div>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground">
+        {/* Version / status badge */}
+        <div className="mt-8 flex items-center justify-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            All systems operational
+          </span>
+        </div>
+
+        <p className="mt-3 text-center text-xs text-muted-foreground">
           © 2026 Faculty Auth System
         </p>
       </div>
+
+      <style>{`
+        @keyframes orbPulse {
+          0%, 100% { transform: scale(1); opacity: 0.7; }
+          50% { transform: scale(1.12); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };

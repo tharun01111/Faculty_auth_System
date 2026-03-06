@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../services/api.js";
@@ -11,7 +11,6 @@ import {
 import {
   School,
   Users,
-  HeartPulse,
   Activity,
   Lock,
   UnlockKeyhole,
@@ -21,7 +20,24 @@ import {
   TriangleAlert,
   LayoutDashboard,
   UserCheck,
+  RefreshCw,
 } from "lucide-react";
+
+// ── Skeleton placeholder ──────────────────────────────────────────────────────
+const StatSkeleton = () => (
+  <Card className="border-border bg-card">
+    <CardContent className="pt-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="h-3 w-24 rounded bg-muted animate-pulse" />
+          <div className="mt-2 h-8 w-14 rounded bg-muted animate-pulse" />
+          <div className="mt-1.5 h-3 w-32 rounded bg-muted animate-pulse" />
+        </div>
+        <div className="h-10 w-10 shrink-0 rounded-lg bg-muted animate-pulse" />
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const StatCard = ({ icon: Icon, label, value, sub, iconClass, bgClass }) => (
   <Card className="border-border bg-card">
@@ -72,22 +88,28 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [lockedCount, setLockedCount] = useState(null);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchAll = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setRefreshing(true);
+    setError(null);
+    try {
+      const statsRes = await api.get("/admin/stats");
+      setStats(statsRes.data);
+      setLockedCount(statsRes.data.lockedAccounts ?? 0);
+    } catch (err) {
+      setError("Failed to load dashboard data. Check your connection and try again.");
+      console.error(err);
+    } finally {
+      if (showSpinner) setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const statsRes = await api.get("/admin/stats");
-        setStats(statsRes.data);
-
-        const locked = statsRes.data.lockedAccounts ?? 0;
-        setLockedCount(locked);
-      } catch (err) {
-        setError("Failed to load dashboard data.");
-        console.error(err);
-      }
-    };
     fetchAll();
-  }, []);
+  }, [fetchAll]);
+
+  const statsLoading = stats === null && !error;
 
   return (
     <div className="min-h-screen bg-background">
@@ -123,7 +145,7 @@ const AdminDashboard = () => {
           <div className="mb-6 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <strong>Backend alert:</strong> {error}
+              <strong>Error:</strong> {error}
             </div>
           </div>
         )}
@@ -143,44 +165,67 @@ const AdminDashboard = () => {
 
         {/* Stats */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            icon={Users}
-            label="Total Faculty"
-            value={stats ? stats.totalFaculty : "—"}
-            sub="Registered in system"
-            iconClass="text-indigo-500"
-            bgClass="bg-indigo-500/10"
-          />
-          <StatCard
-            icon={UserCheck}
-            label="Active Accounts"
-            value={stats ? stats.activeAccounts : "—"}
-            sub="Currently accessible"
-            iconClass="text-emerald-500"
-            bgClass="bg-emerald-500/10"
-          />
-          <StatCard
-            icon={Lock}
-            label="Locked Accounts"
-            value={lockedCount ?? "—"}
-            sub="Require admin unlock"
-            iconClass={lockedCount > 0 ? "text-rose-500" : "text-muted-foreground"}
-            bgClass={lockedCount > 0 ? "bg-rose-500/10" : "bg-muted"}
-          />
-          <StatCard
-            icon={Activity}
-            label="Logins (24h)"
-            value={stats ? stats.recentLogins : "—"}
-            sub="Successful in last 24h"
-            iconClass="text-sky-500"
-            bgClass="bg-sky-500/10"
-          />
+          {statsLoading ? (
+            <>
+              <StatSkeleton />
+              <StatSkeleton />
+              <StatSkeleton />
+              <StatSkeleton />
+            </>
+          ) : (
+            <>
+              <StatCard
+                icon={Users}
+                label="Total Faculty"
+                value={stats?.totalFaculty ?? "—"}
+                sub="Registered in system"
+                iconClass="text-indigo-500"
+                bgClass="bg-indigo-500/10"
+              />
+              <StatCard
+                icon={UserCheck}
+                label="Active Accounts"
+                value={stats?.activeAccounts ?? "—"}
+                sub="Currently accessible"
+                iconClass="text-emerald-500"
+                bgClass="bg-emerald-500/10"
+              />
+              <StatCard
+                icon={Lock}
+                label="Locked Accounts"
+                value={lockedCount ?? "—"}
+                sub="Require admin unlock"
+                iconClass={lockedCount > 0 ? "text-rose-500" : "text-muted-foreground"}
+                bgClass={lockedCount > 0 ? "bg-rose-500/10" : "bg-muted"}
+              />
+              <StatCard
+                icon={Activity}
+                label="Logins (24h)"
+                value={stats?.recentLogins ?? "—"}
+                sub="Successful in last 24h"
+                iconClass="text-sky-500"
+                bgClass="bg-sky-500/10"
+              />
+            </>
+          )}
         </div>
 
-        {/* Quick Actions */}
-        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Quick Actions
-        </h3>
+        {/* Quick Actions header with Refresh */}
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Quick Actions
+          </h3>
+          <button
+            onClick={() => fetchAll(true)}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground disabled:opacity-50"
+            title="Refresh stats"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ActionCard
             icon={UnlockKeyhole}

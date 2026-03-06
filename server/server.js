@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 import connectDb from "./config/db.js";
 import facultyRoutes from "./routes/faculty.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
-import { errorHandler } from "./middleware/errorMiddleware.js";
+import { errorHandler, notFoundHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
@@ -59,10 +59,26 @@ app.get("/api/test", (req, res) => {
   res.json({ message: "The app is working..." });
 });
 
-// Error Handling Middleware
+// ── 404 — must be placed after all valid routes ────────────────────────────────
+app.use(notFoundHandler);
+
+// ── Global Error Handler ──────────────────────────────────────────────────────
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+const server = app.listen(PORT, () => {
+  console.log(`[Server] Running on http://localhost:${PORT}`);
+});
+
+// ── Process-level safety nets ─────────────────────────────────────────────────
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("[Process] Unhandled Promise Rejection:", reason);
+  // Gracefully shut down so the process manager can restart
+  server.close(() => process.exit(1));
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[Process] Uncaught Exception:", err.name, "|", err.message);
+  console.error(err.stack);
+  process.exit(1);
 });

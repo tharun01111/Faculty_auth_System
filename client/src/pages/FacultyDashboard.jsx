@@ -4,10 +4,7 @@ import LogoutButton from "../components/LogoutButton";
 import ThemeToggle from "../components/ThemeToggle";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
-  CardDescription,
 } from "../components/ui/card";
 import {
   CalendarDays,
@@ -17,7 +14,7 @@ import {
   Bell,
   ClipboardList,
   GraduationCap,
-  LayoutDashboard,
+  Clock,
 } from "lucide-react";
 
 const actionCards = [
@@ -65,8 +62,33 @@ const actionCards = [
   },
 ];
 
+/** Returns "Good morning", "Good afternoon", or "Good evening" based on current hour */
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+};
+
+/** Formats a stored ISO date string into a readable "last login" label */
+const formatLastLogin = (isoString) => {
+  if (!isoString) return null;
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Kolkata",
+    });
+  } catch {
+    return null;
+  }
+};
+
 const FacultyDashboard = () => {
-  const { role } = useContext(AuthContext);
+  const { lastLogin } = useContext(AuthContext);
+  const greeting = getGreeting();
+  const lastLoginFormatted = formatLastLogin(lastLogin);
 
   return (
     <div className="min-h-screen bg-background">
@@ -96,15 +118,18 @@ const FacultyDashboard = () => {
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* ── Greeting ── */}
         <div className="mb-8">
-          <div className="flex items-center gap-2">
-            <LayoutDashboard className="h-5 w-5 text-primary" />
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">
-              Welcome back
-            </h2>
-          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+            {greeting} 👋
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Here is your faculty portal overview for today.
           </p>
+          {lastLoginFormatted && (
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              Last login: <span className="font-medium text-foreground">{lastLoginFormatted}</span>
+            </div>
+          )}
         </div>
 
         {/* ── Quick Stats ── */}

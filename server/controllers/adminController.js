@@ -3,6 +3,7 @@ import User from "../models/Employee.js"; // Faculty model
 import Logs from "../models/LoginLog.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { sendWelcomeEmail, sendAccountUnlockedEmail } from "../services/emailService.js";
 
 export const adminRegister = async (req, res, next) => {
   try {
@@ -22,14 +23,11 @@ export const adminRegister = async (req, res, next) => {
 
     const hash = await bcrypt.hash(password, 10);
 
-    await Admin.create({
-      name,
-      email,
-      password: hash,
-    });
+    await Admin.create({ name, email, password: hash });
 
     res.status(201).json({ message: "Successfully created an admin..." });
   } catch (err) {
+    console.error(`[adminController/adminRegister] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
@@ -46,35 +44,35 @@ export const adminLogin = async (req, res, next) => {
     const admin = await Admin.findOne({ email });
 
     if (!admin) {
-      res.status(400);
-      throw new Error("Admin does not exist...");
+      res.status(401);
+      throw new Error("Invalid credentials");
     }
 
     const check = await bcrypt.compare(password, admin.password);
 
     if (!check) {
-      res.status(400);
-      throw new Error("Invalid credentials...");
+      res.status(401);
+      throw new Error("Invalid credentials");
     }
 
     const token = await makeToken(admin);
 
     res.status(200).json({ message: "Successfully logged in", token, role: "admin" });
   } catch (err) {
+    console.error(`[adminController/adminLogin] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
 
 const makeToken = async (admin) => {
-  const token = jwt.sign(
+  return jwt.sign(
     { id: admin._id, role: "admin" },
     process.env.JWT_SECRET,
-    { expiresIn: "1d" },
+    { expiresIn: "1d" }
   );
-  return token;
 };
 
-// ✅ GET /admin/stats — real counts from DB
+// GET /admin/stats — real counts from DB
 export const getAdminStats = async (req, res, next) => {
   try {
     const [totalFaculty, lockedAccounts, totalLogs] = await Promise.all([
@@ -100,24 +98,23 @@ export const getAdminStats = async (req, res, next) => {
       systemHealth: "Good",
     });
   } catch (err) {
+    console.error(`[adminController/getAdminStats] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
 
-// ✅ GET /admin/faculty — list all faculty (admin-only)
+// GET /admin/faculty — list all faculty (admin-only)
 export const getAllFaculty = async (req, res, next) => {
   try {
-    const faculty = await User.find()
-      .select("-password")
-      .sort({ createdAt: -1 });
-
+    const faculty = await User.find().select("-password").sort({ createdAt: -1 });
     res.status(200).json({ faculty });
   } catch (err) {
+    console.error(`[adminController/getAllFaculty] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
 
-// ✅ PATCH /admin/faculty/:id/unlock — reset lock on a faculty account
+// PATCH /admin/faculty/:id/unlock — reset lock on a faculty account
 export const unlockFaculty = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -136,6 +133,9 @@ export const unlockFaculty = async (req, res, next) => {
     faculty.failedLogin = 0;
     await faculty.save();
 
+    // Fire account-unlocked email (non-blocking)
+    sendAccountUnlockedEmail(faculty);
+
     res.status(200).json({
       message: `Account for ${faculty.email} has been unlocked`,
       faculty: {
@@ -147,11 +147,12 @@ export const unlockFaculty = async (req, res, next) => {
       },
     });
   } catch (err) {
+    console.error(`[adminController/unlockFaculty] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
 
-// ✅ DELETE /admin/faculty/:id — remove a faculty account
+// DELETE /admin/faculty/:id — remove a faculty account
 export const deleteFaculty = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -168,11 +169,12 @@ export const deleteFaculty = async (req, res, next) => {
       message: `Faculty account for ${faculty.email} has been deleted`,
     });
   } catch (err) {
+    console.error(`[adminController/deleteFaculty] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
 
-// ✅ GET /admin/logs — paginated login audit logs
+// GET /admin/logs — paginated login audit logs
 export const getLoginLogs = async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -183,11 +185,7 @@ export const getLoginLogs = async (req, res, next) => {
     const filter = statusFilter ? { status: statusFilter } : {};
 
     const [logs, total] = await Promise.all([
-      Logs.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+      Logs.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Logs.countDocuments(filter),
     ]);
 
@@ -201,6 +199,7 @@ export const getLoginLogs = async (req, res, next) => {
       },
     });
   } catch (err) {
+    console.error(`[adminController/getLoginLogs] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };

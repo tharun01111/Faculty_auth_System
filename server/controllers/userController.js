@@ -2,6 +2,7 @@ import User from "../models/Employee.js";
 import Logs from "../models/LoginLog.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { sendAccountLockedEmail, sendWelcomeEmail } from "../services/emailService.js";
 
 const MAX_ATTEMPTS = 3;
 
@@ -17,18 +18,12 @@ export const login = async (req, res, next) => {
 
     const user = await User.findOne({ email });
 
-
     // User not found
     if (!user) {
       try {
-        await Logs.create({
-          email,
-          status: "FAILURE",
-          ipAddress,
-          userAgent,
-        });
+        await Logs.create({ email, status: "FAILURE", ipAddress, userAgent });
       } catch (logErr) {
-        console.error("Login Log Error (User Not Found):", logErr);
+        console.error("[userController/login] Log creation failed (user not found):", logErr.message);
       }
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -38,11 +33,9 @@ export const login = async (req, res, next) => {
       try {
         await logAttempt(user, "FAILURE", ipAddress, userAgent);
       } catch (logErr) {
-        console.error("Login Log Error (Locked):", logErr);
+        console.error("[userController/login] Log creation failed (locked):", logErr.message);
       }
-      return res
-        .status(403)
-        .json({ message: "Account is locked. Contact admin" });
+      return res.status(403).json({ message: "Account is locked. Contact admin" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -51,15 +44,22 @@ export const login = async (req, res, next) => {
     if (!isMatch) {
       user.failedLogin += 1;
 
-      if (user.failedLogin >= MAX_ATTEMPTS) {
+      const justLocked = user.failedLogin >= MAX_ATTEMPTS;
+      if (justLocked) {
         user.isLocked = true;
       }
 
       await user.save();
+
+      // Fire account-locked email (non-blocking)
+      if (justLocked) {
+        sendAccountLockedEmail(user);
+      }
+
       try {
         await logAttempt(user, "FAILURE", ipAddress, userAgent);
       } catch (logErr) {
-        console.error("Login Log Error (Wrong Password):", logErr);
+        console.error("[userController/login] Log creation failed (wrong password):", logErr.message);
       }
 
       return res.status(401).json({ message: "Invalid credentials" });
@@ -71,14 +71,14 @@ export const login = async (req, res, next) => {
     user.lastLogin = new Date();
     await user.save();
 
-    // ✅ Normalize: always issue JWT with canonical role "faculty"
+    // Normalize: always issue JWT with canonical role "faculty"
     const canonicalRole = "faculty";
     const token = makeToken(user._id, canonicalRole);
 
     try {
       await logAttempt(user, "SUCCESS", ipAddress, userAgent);
     } catch (logErr) {
-      console.error("Login Log Error (Success):", logErr);
+      console.error("[userController/login] Log creation failed (success):", logErr.message);
     }
 
     res.status(200).json({
@@ -88,7 +88,7 @@ export const login = async (req, res, next) => {
       lastLogin: user.lastLogin,
     });
   } catch (err) {
-    console.error("LOGIN CONTROLLER ERROR:", err);
+    console.error(`[userController/login] Unhandled error | Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
@@ -97,44 +97,31 @@ export const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    // Simple check (token verification should ideally be middleware, but keeping logic for now)
-    // The route uses 'protect' middleware now, so req.user should be populated if verified.
-    // However, existing logic uses req.headers manual check. 
-    // Let's rely on the middleware we added in routes/faculty.routes.js which calls 'protect'.
-    // 'protect' adds 'req.user'. 
+    // Route is protected by 'protect' + 'adminOnly' middleware
+    const id = req.user ? req.user._id : null;
 
-    // If we want to strictly follow the old logic where createdBy comes from the token of the requester:
-    
-    // const token = req.headers.authorization.split(" ")[1];
-    // const { id } = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Since we use 'protect' middleware, we can just use req.user._id
-    // But 'protect' middleware might not be used on the register route in previous version?
-    // The user had: const { id } = jwt.verify(token, process.env.JWT_SECRET);
-    // So it was protected.
-    
-    const id = req.user ? req.user._id : null; 
-    // If middleware is not used, this will crash. In faculty.routes.js I added verify.
-
-    const user = await User.findOne({ email });
-
-    if (user) {
-        res.status(400); // Changed from 403 for bad request (duplicate)
-        throw new Error("User already exists");
+    const existing = await User.findOne({ email });
+    if (existing) {
+      res.status(400);
+      throw new Error("User already exists");
     }
 
     const hash = await bcrypt.hash(password, 10);
 
-    await User.create({
-        name,
-        email,
-        password: hash,
-        createdBy: id,
+    const newFaculty = await User.create({
+      name,
+      email,
+      password: hash,
+      createdBy: id,
     });
 
+    // Fire welcome email (non-blocking)
+    sendWelcomeEmail(newFaculty);
+
     res.status(201).json({ message: "User created successfully..." });
-  } catch(err) {
-      next(err);
+  } catch (err) {
+    console.error(`[userController/register] Unhandled error | Type: ${err.name} | ${err.message}`);
+    next(err);
   }
 };
 
@@ -145,9 +132,8 @@ const makeToken = (id, role) => {
 };
 
 const logAttempt = async (user, status, ipAddress, userAgent) => {
-  // Ensure we don't block the main thread if logging fails
   try {
-     await Logs.create({
+    await Logs.create({
       userId: user._id,
       email: user.email,
       status,
@@ -155,8 +141,7 @@ const logAttempt = async (user, status, ipAddress, userAgent) => {
       userAgent,
     });
   } catch (err) {
-    console.error("Log creation failed:", err);
-    // Don't re-throw, just log it. Logging is non-critical.
+    console.error("[userController/logAttempt] Log creation failed:", err.message);
+    // Don't re-throw — logging is non-critical.
   }
 };
-
