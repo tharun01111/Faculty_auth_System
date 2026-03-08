@@ -1,5 +1,5 @@
 import { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../services/api.js";
 import { Input } from "../components/ui/input";
@@ -143,9 +143,19 @@ const Login = ({ expectedRole }) => {
             </div>
 
             <div className="grid gap-1.5">
-              <Label htmlFor="password" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <Lock className="h-3.5 w-3.5" /> Password
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Lock className="h-3.5 w-3.5" /> Password
+                </Label>
+                {expectedRole === "faculty" && (
+                  <Link
+                    to="/faculty/forgot-password"
+                    className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Forgot password?
+                  </Link>
+                )}
+              </div>
               <div className="relative">
                 <Input
                   id="password"

@@ -2,7 +2,12 @@ import User from "../models/Employee.js";
 import Logs from "../models/LoginLog.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { sendAccountLockedEmail, sendWelcomeEmail } from "../services/emailService.js";
+import crypto from "crypto";
+import {
+  sendAccountLockedEmail,
+  sendWelcomeEmail,
+  sendPasswordResetEmail,
+} from "../services/emailService.js";
 
 const MAX_ATTEMPTS = 3;
 
@@ -121,6 +126,89 @@ export const register = async (req, res, next) => {
     res.status(201).json({ message: "User created successfully..." });
   } catch (err) {
     console.error(`[userController/register] Unhandled error | Type: ${err.name} | ${err.message}`);
+    next(err);
+  }
+};
+
+// ── Forgot Password ────────────────────────────────────────────────────────────
+// POST /faculty/forgot-password  { email }
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "No account found with that email address.",
+      });
+    }
+
+    // Generate a random token and store its SHA-256 hash in the DB
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    await user.save();
+
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const resetUrl = `${clientUrl}/faculty/reset-password/${rawToken}`;
+
+    // Fire reset email (non-blocking)
+    sendPasswordResetEmail(user, resetUrl);
+
+    res.status(200).json({ message: "Reset link sent successfully." });
+  } catch (err) {
+    console.error(`[userController/forgotPassword] Unhandled error | Type: ${err.name} | ${err.message}`);
+    next(err);
+  }
+};
+
+// ── Reset Password ─────────────────────────────────────────────────────────────
+// POST /faculty/reset-password/:token  { password }
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ message: "New password is required" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    // Hash the incoming raw token to compare with DB
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() }, // token must not be expired
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Reset link is invalid or has expired." });
+    }
+
+    // Set new hashed password and clear reset fields
+    user.password = await bcrypt.hash(password, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    // Also reset any lock state in case the account was locked
+    user.failedLogin = 0;
+    user.isLocked = false;
+
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful. You can now log in." });
+  } catch (err) {
+    console.error(`[userController/resetPassword] Unhandled error | Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };

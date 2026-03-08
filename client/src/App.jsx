@@ -13,6 +13,8 @@ import FacultyDashboard from "./pages/FacultyDashboard.jsx";
 import RegisterFaculty from "./pages/RegisterFaculty.jsx";
 import SystemLogs from "./pages/SystemLogs.jsx";
 import Unauthorized from "./pages/Unauthorized.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 
 const roleRedirect = {
   admin: "/admin/dashboard",
@@ -64,6 +66,10 @@ function AppRoutes() {
           </PublicOnlyGate>
         }
       />
+
+      {/* Faculty password reset — fully public, no auth gate */}
+      <Route path="/faculty/forgot-password" element={<ForgotPassword />} />
+      <Route path="/faculty/reset-password/:token" element={<ResetPassword />} />
 
       <Route path="/unauthorized" element={<Unauthorized />} />
 
