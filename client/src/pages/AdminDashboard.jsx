@@ -21,7 +21,21 @@ import {
   LayoutDashboard,
   UserCheck,
   RefreshCw,
+  BarChart2,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 // ── Skeleton placeholder ──────────────────────────────────────────────────────
 const StatSkeleton = () => (
@@ -37,6 +51,18 @@ const StatSkeleton = () => (
       </div>
     </CardContent>
   </Card>
+);
+
+const ChartSkeleton = () => (
+  <div className="h-full w-full flex items-end justify-around gap-2 px-4 pb-4 pt-6">
+    {[60, 85, 40, 70, 55, 90, 45].map((h, i) => (
+      <div
+        key={i}
+        className="flex-1 rounded-t bg-muted animate-pulse"
+        style={{ height: `${h}%` }}
+      />
+    ))}
+  </div>
 );
 
 const StatCard = ({ icon: Icon, label, value, sub, iconClass, bgClass }) => (
@@ -82,10 +108,44 @@ const ActionCard = ({ icon: Icon, iconClass, bgClass, title, description, onClic
   </button>
 );
 
+// ── Custom Tooltip for Bar Chart ──────────────────────────────────────────────
+const BarTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-lg text-xs">
+      <p className="mb-1 font-semibold text-foreground">{label}</p>
+      {payload.map((p) => (
+        <div key={p.name} className="flex items-center gap-2">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ background: p.fill }} />
+          <span className="text-muted-foreground capitalize">{p.name}:</span>
+          <span className="font-semibold text-foreground">{p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ── Custom Tooltip for Pie Chart ──────────────────────────────────────────────
+const PieTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-lg text-xs">
+      <div className="flex items-center gap-2">
+        <span className="inline-block h-2 w-2 rounded-full" style={{ background: payload[0].payload.fill }} />
+        <span className="text-muted-foreground">{payload[0].name}:</span>
+        <span className="font-semibold text-foreground">{payload[0].value}</span>
+      </div>
+    </div>
+  );
+};
+
+const PIE_COLORS = ["#6366f1", "#f43f5e"]; // indigo for active, rose for locked
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { role } = useContext(AuthContext);
   const [stats, setStats] = useState(null);
+  const [chartData, setChartData] = useState(null);
   const [lockedCount, setLockedCount] = useState(null);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,9 +154,13 @@ const AdminDashboard = () => {
     if (showSpinner) setRefreshing(true);
     setError(null);
     try {
-      const statsRes = await api.get("/admin/stats");
+      const [statsRes, chartRes] = await Promise.all([
+        api.get("/admin/stats"),
+        api.get("/admin/charts"),
+      ]);
       setStats(statsRes.data);
       setLockedCount(statsRes.data.lockedAccounts ?? 0);
+      setChartData(chartRes.data);
     } catch (err) {
       setError("Failed to load dashboard data. Check your connection and try again.");
       console.error(err);
@@ -110,6 +174,13 @@ const AdminDashboard = () => {
   }, [fetchAll]);
 
   const statsLoading = stats === null && !error;
+  const chartsLoading = chartData === null && !error;
+
+  // Add fill colour to pie data so tooltip can reference it
+  const pieData = chartData?.accountStatus?.map((d, i) => ({
+    ...d,
+    fill: PIE_COLORS[i % PIE_COLORS.length],
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -208,6 +279,100 @@ const AdminDashboard = () => {
               />
             </>
           )}
+        </div>
+
+        {/* ── Analytics Charts ─────────────────────────────────────────────── */}
+        <div className="mb-4 flex items-center gap-2">
+          <BarChart2 className="h-4 w-4 text-primary" />
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Analytics
+          </h3>
+        </div>
+        <div className="mb-8 grid gap-4 lg:grid-cols-3">
+
+          {/* Bar Chart — Login Activity (Last 7 Days) */}
+          <Card className="border-border bg-card lg:col-span-2">
+            <CardContent className="pt-5">
+              <p className="mb-1 text-sm font-semibold text-foreground">Login Activity</p>
+              <p className="mb-4 text-xs text-muted-foreground">Success vs failures over the last 7 days</p>
+              <div className="h-56">
+                {chartsLoading ? (
+                  <ChartSkeleton />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartData?.loginActivity ?? []}
+                      margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
+                      barCategoryGap="35%"
+                      barGap={3}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis
+                        dataKey="day"
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip content={<BarTooltip />} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
+                      <Legend
+                        wrapperStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}
+                        iconType="circle"
+                        iconSize={8}
+                      />
+                      <Bar dataKey="success" name="Success" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="failure" name="Failure" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pie Chart — Account Status */}
+          <Card className="border-border bg-card">
+            <CardContent className="pt-5">
+              <p className="mb-1 text-sm font-semibold text-foreground">Account Status</p>
+              <p className="mb-4 text-xs text-muted-foreground">Active vs locked accounts</p>
+              <div className="h-56">
+                {chartsLoading ? (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="h-36 w-36 rounded-full border-[10px] border-muted animate-pulse" />
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData ?? []}
+                        cx="50%"
+                        cy="45%"
+                        innerRadius={55}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {(pieData ?? []).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<PieTooltip />} />
+                      <Legend
+                        wrapperStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}
+                        iconType="circle"
+                        iconSize={8}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick Actions header with Refresh */}

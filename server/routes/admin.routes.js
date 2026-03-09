@@ -7,6 +7,7 @@ import {
   unlockFaculty,
   deleteFaculty,
   getLoginLogs,
+  getChartData,
 } from "../controllers/adminController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
@@ -23,5 +24,8 @@ router.delete("/faculty/:id", protect, adminOnly, deleteFaculty);
 
 // Audit logs (admin-only)
 router.get("/logs", protect, adminOnly, getLoginLogs);
+
+// Analytics chart data (admin-only)
+router.get("/charts", protect, adminOnly, getChartData);
 
 export default router;

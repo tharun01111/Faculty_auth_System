@@ -203,3 +203,67 @@ export const getLoginLogs = async (req, res, next) => {
     next(err);
   }
 };
+
+// GET /admin/charts — aggregated data for Recharts
+export const getChartData = async (req, res, next) => {
+  try {
+    // Build array of last 7 day labels (oldest first)
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(
+        d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+      );
+    }
+
+    const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    // Aggregate login logs grouped by day and status
+    const rawAgg = await Logs.aggregate([
+      { $match: { createdAt: { $gte: since7d } } },
+      {
+        $group: {
+          _id: {
+            day: {
+              $dateToString: { format: "%d %b", date: "$createdAt" },
+            },
+            status: "$status",
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Map into { day, success, failure } objects
+    const dayMap = {};
+    days.forEach((d) => {
+      dayMap[d] = { day: d, success: 0, failure: 0 };
+    });
+
+    rawAgg.forEach(({ _id, count }) => {
+      if (dayMap[_id.day]) {
+        if (_id.status === "SUCCESS") dayMap[_id.day].success = count;
+        else dayMap[_id.day].failure = count;
+      }
+    });
+
+    const loginActivity = Object.values(dayMap);
+
+    // Account status breakdown for pie chart
+    const [totalFaculty, lockedAccounts] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ isLocked: true }),
+    ]);
+
+    const accountStatus = [
+      { name: "Active", value: totalFaculty - lockedAccounts },
+      { name: "Locked", value: lockedAccounts },
+    ];
+
+    res.status(200).json({ loginActivity, accountStatus });
+  } catch (err) {
+    console.error(`[adminController/getChartData] Type: ${err.name} | ${err.message}`);
+    next(err);
+  }
+};

@@ -24,6 +24,7 @@ A secure, modern, full-stack web application for managing Faculty and Admin auth
 
 ### Admin Portal
 - **Real-time Stats** — Total Faculty, Active Accounts, Locked Accounts, Logins in last 24h (live from DB)
+- **Analytics Charts** — Interactive Bar Chart (7-day login activity: success vs failures) and Donut Chart (account status breakdown) powered by Recharts
 - **Faculty Management** — View all faculty, unlock locked accounts, delete accounts
 - **Register Faculty** — Create new faculty accounts directly from the admin panel
 - **System Logs** — Paginated, filterable login audit log (Success / Failure)
@@ -36,8 +37,9 @@ A secure, modern, full-stack web application for managing Faculty and Admin auth
 - **Password Visibility Toggle** — Show/hide password on the login form
 - **Context-Aware Error Banners** — Amber warning for locked accounts, red for invalid credentials
 - **Shake Animation** — Error banner shakes on each new login failure
-- **Loading Skeletons** — Admin dashboard stat cards show skeleton placeholders while fetching
-- **Refresh Button** — Re-fetch admin stats on demand without a full page reload
+- **Loading Skeletons** — Admin dashboard stat cards and charts show skeleton placeholders while fetching
+- **Recharts Analytics** — Custom-styled Recharts components with theme-aware tooltips, responsive containers, and animated transitions
+- **Refresh Button** — Re-fetch admin stats and chart data on demand without a full page reload
 - **Animated Portal Selector** — Soft gradient orb background and "All systems operational" status badge
 - **Time-of-Day Greeting** — Faculty dashboard says "Good morning / afternoon / evening"
 - **Micro-interactions** — Loading spinners, auto-dismissing toasts, delete confirmation modals
@@ -97,6 +99,7 @@ Every error in the system is traced to its exact source:
 - **Routing**: React Router v7
 - **State Management**: React Context API (`AuthContext` with `lastLogin`)
 - **Styling**: Tailwind CSS v4, shadcn/ui, Lucide React
+- **Charts**: Recharts (Bar Chart + Donut Pie Chart with custom tooltips and skeletons)
 - **HTTP Client**: Axios (with interceptors for token injection + 401/403 handling)
 
 ### Backend (`/server`)
@@ -117,7 +120,7 @@ Mini_Project/
 │   │   ├── components/       # UI Components (Button, Card, Input, ThemeToggle…)
 │   │   ├── context/          # AuthProvider — isAuth, role, lastLogin
 │   │   ├── pages/
-│   │   │   ├── AdminDashboard.jsx      # Admin home — live stats + skeletons + refresh
+│   │   │   ├── AdminDashboard.jsx      # Admin home — live stats + Recharts analytics + refresh
 │   │   │   ├── FacultyManagement.jsx   # List, unlock, delete faculty
 │   │   │   ├── RegisterFaculty.jsx     # Create new faculty account
 │   │   │   ├── SystemLogs.jsx          # Login audit trail
@@ -132,7 +135,7 @@ Mini_Project/
     ├── config/
     │   └── db.js                # MongoDB connection with structured error logging
     ├── controllers/
-    │   ├── adminController.js   # Stats, faculty CRUD, audit logs
+    │   ├── adminController.js   # Stats, faculty CRUD, audit logs, chart data aggregation
     │   └── userController.js    # Faculty login & register
     ├── middleware/
     │   ├── authMiddleware.js    # protect (token expiry aware), adminOnly, facultyOnly
@@ -205,6 +208,7 @@ App runs at `http://localhost:5173`.
 | `POST` | `/admin/login` | Public | Authenticate admin (rate-limited) |
 | `POST` | `/admin/register` | Public | Create admin account |
 | `GET` | `/admin/stats` | Admin JWT | Live stats (faculty count, locked, logins 24h) |
+| `GET` | `/admin/charts` | Admin JWT | Aggregated chart data — 7-day login activity + account status breakdown |
 | `GET` | `/admin/faculty` | Admin JWT | List all faculty accounts |
 | `PATCH` | `/admin/faculty/:id/unlock` | Admin JWT | Unlock a locked faculty account |
 | `DELETE` | `/admin/faculty/:id` | Admin JWT | Delete a faculty account |
