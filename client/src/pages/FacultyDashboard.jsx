@@ -1,4 +1,5 @@
 import { useContext } from "react";
+import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import LogoutButton from "../components/LogoutButton";
 import ThemeToggle from "../components/ThemeToggle";
@@ -15,6 +16,7 @@ import {
   ClipboardList,
   GraduationCap,
   Clock,
+  User,
 } from "lucide-react";
 
 const actionCards = [
@@ -86,7 +88,7 @@ const formatLastLogin = (isoString) => {
 };
 
 const FacultyDashboard = () => {
-  const { lastLogin } = useContext(AuthContext);
+  const { lastLogin, name } = useContext(AuthContext);
   const greeting = getGreeting();
   const lastLoginFormatted = formatLastLogin(lastLogin);
 
@@ -109,6 +111,13 @@ const FacultyDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              to="/faculty/profile"
+              className="flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground sm:text-sm"
+            >
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Profile</span>
+            </Link>
             <ThemeToggle />
             <LogoutButton />
           </div>
@@ -119,7 +128,7 @@ const FacultyDashboard = () => {
         {/* ── Greeting ── */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold tracking-tight text-foreground">
-            {greeting} 👋
+            {greeting}{name ? `, ${name}` : ""} 👋
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Here is your faculty portal overview for today.

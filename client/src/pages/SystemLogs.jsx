@@ -23,6 +23,7 @@ import {
   Filter,
   Loader2,
   AlertTriangle,
+  Download,
 } from "lucide-react";
 
 const StatusBadge = ({ status }) =>
@@ -87,6 +88,38 @@ const SystemLogs = () => {
     fetchLogs(newPage);
   };
 
+  const handleExportCsv = () => {
+    if (!logs || logs.length === 0) return;
+    
+    // Headers
+    const headers = ["Timestamp", "Email", "Status", "IP Address", "User Agent"];
+    
+    // Rows
+    const rows = logs.map(log => [
+      formatDate(log.createdAt).replace(/,/g, ""), // remove commas to avoid mixing columns
+      log.email,
+      log.status,
+      log.ipAddress,
+      `"${log.userAgent.replace(/"/g, '""')}"` // escape quotes
+    ]);
+    
+    // Combine
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+    
+    // Download trigger
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `system_logs_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Summary counts from current full dataset for filter badges
   const successCount = logs.filter((l) => l.status === "SUCCESS").length;
   const failureCount = logs.filter((l) => l.status === "FAILURE").length;
@@ -130,16 +163,28 @@ const SystemLogs = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-fit gap-1.5"
-            onClick={() => fetchLogs(1)}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-fit gap-1.5"
+              onClick={handleExportCsv}
+              disabled={loading || logs.length === 0}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-fit gap-1.5"
+              onClick={() => fetchLogs(1)}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Page title */}

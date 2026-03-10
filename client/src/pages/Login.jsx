@@ -61,7 +61,7 @@ const Login = ({ expectedRole }) => {
 
     try {
       const res = await api.post(`${expectedRole}/login`, { email, password });
-      const { token, role, lastLogin } = res.data;
+      const { token, role, lastLogin, name } = res.data;
 
       const isAuthorized =
         role === expectedRole || (expectedRole === "faculty" && role === "user");
@@ -72,7 +72,7 @@ const Login = ({ expectedRole }) => {
         return;
       }
 
-      login(token, role, lastLogin);
+      login(token, role, lastLogin, name);
       navigate(`/${expectedRole}/dashboard`);
     } catch (err) {
       const message = err.response?.data?.message || err.message || "Login failed";

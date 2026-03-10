@@ -91,6 +91,7 @@ export const login = async (req, res, next) => {
       token,
       role: canonicalRole,
       lastLogin: user.lastLogin,
+      name: user.name,
     });
   } catch (err) {
     console.error(`[userController/login] Unhandled error | Type: ${err.name} | ${err.message}`);
@@ -231,5 +232,41 @@ const logAttempt = async (user, status, ipAddress, userAgent) => {
   } catch (err) {
     console.error("[userController/logAttempt] Log creation failed:", err.message);
     // Don't re-throw — logging is non-critical.
+  }
+};
+
+// ── Change Password ─────────────────────────────────────────────────────────────
+// PATCH /faculty/change-password  { currentPassword, newPassword }
+export const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Both current and new passwords are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters" });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Incorrect current password" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error(`[userController/changePassword] Unhandled error | Type: ${err.name} | ${err.message}`);
+    next(err);
   }
 };

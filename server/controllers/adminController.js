@@ -57,7 +57,7 @@ export const adminLogin = async (req, res, next) => {
 
     const token = await makeToken(admin);
 
-    res.status(200).json({ message: "Successfully logged in", token, role: "admin" });
+    res.status(200).json({ message: "Successfully logged in", token, role: "admin", name: admin.name });
   } catch (err) {
     console.error(`[adminController/adminLogin] Type: ${err.name} | ${err.message}`);
     next(err);

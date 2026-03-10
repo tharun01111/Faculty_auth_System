@@ -143,7 +143,7 @@ const PIE_COLORS = ["#6366f1", "#f43f5e"]; // indigo for active, rose for locked
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { role } = useContext(AuthContext);
+  const { role, name } = useContext(AuthContext);
   const [stats, setStats] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [lockedCount, setLockedCount] = useState(null);
@@ -171,6 +171,13 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchAll();
+
+    // Auto-refresh dashboard stats every 30 seconds silently
+    const intervalId = setInterval(() => {
+      fetchAll(false);
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, [fetchAll]);
 
   const statsLoading = stats === null && !error;
@@ -226,7 +233,7 @@ const AdminDashboard = () => {
           <div className="flex items-center gap-2">
             <LayoutDashboard className="h-5 w-5 text-primary" />
             <h2 className="text-2xl font-bold tracking-tight text-foreground">
-              Welcome back
+              Welcome back{name ? `, ${name}` : ""}
             </h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
