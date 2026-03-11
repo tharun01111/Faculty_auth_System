@@ -17,10 +17,6 @@ export const login = async (req, res, next) => {
     const ipAddress = req.ip;
     const userAgent = req.headers["user-agent"] || "Unknown";
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
     const user = await User.findOne({ email });
 
     // User not found
@@ -137,10 +133,6 @@ export const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
-    }
-
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -176,14 +168,6 @@ export const resetPassword = async (req, res, next) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
-
-    if (!password) {
-      return res.status(400).json({ message: "New password is required" });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
-    }
 
     // Hash the incoming raw token to compare with DB
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
@@ -241,13 +225,6 @@ export const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
     
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ message: "Both current and new passwords are required" });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: "New password must be at least 6 characters" });
-    }
 
     const user = await User.findById(req.user._id);
 

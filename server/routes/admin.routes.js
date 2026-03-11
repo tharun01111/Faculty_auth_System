@@ -10,11 +10,13 @@ import {
   getChartData,
 } from "../controllers/adminController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
+import { validate } from "../middleware/validateRequest.js";
+import { loginSchema, adminRegisterSchema } from "../schemas/authSchemas.js";
 
 const router = express.Router();
 
-router.post("/login", adminLogin);
-router.post("/register", adminRegister);
+router.post("/login", validate(loginSchema), adminLogin);
+router.post("/register", validate(adminRegisterSchema), adminRegister);
 router.get("/stats", protect, adminOnly, getAdminStats);
 
 // Faculty management (admin-only)

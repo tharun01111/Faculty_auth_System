@@ -9,11 +9,6 @@ export const adminRegister = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!email || !password || !name) {
-      res.status(400);
-      throw new Error("All fields are required...");
-    }
-
     const admin = await Admin.findOne({ email });
 
     if (admin) {
@@ -35,11 +30,6 @@ export const adminRegister = async (req, res, next) => {
 export const adminLogin = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      res.status(400);
-      throw new Error("All fields are required...");
-    }
 
     const admin = await Admin.findOne({ email });
 

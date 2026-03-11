@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import connectDb from "./config/db.js";
 import facultyRoutes from "./routes/faculty.routes.js";
@@ -31,6 +32,16 @@ app.use(
 );
 
 app.use(express.json());
+
+// ── Security Headers (Helmet) ─────────────────────────────────────────────
+// Sets 14 security-related HTTP headers automatically.
+// contentSecurityPolicy disabled in dev to avoid blocking localhost assets;
+// re-enable (or customise) in production.
+app.use(
+  helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === "production",
+  })
+);
 
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
 const loginLimiter = rateLimit({
