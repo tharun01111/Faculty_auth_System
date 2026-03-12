@@ -56,3 +56,18 @@ export const changePasswordSchema = z.object({
     .min(1, "Current password is required"),
   newPassword: passwordField,
 });
+
+/** POST /admin/faculty/bulk-register  { faculty: [{name, email, password}] } */
+export const bulkRegisterSchema = z.object({
+  faculty: z
+    .array(
+      z.object({
+        name: nameField,
+        email: emailField,
+        password: passwordField,
+      })
+    )
+    .min(1, "At least one faculty row is required")
+    .max(200, "Cannot import more than 200 rows at once"),
+});
+

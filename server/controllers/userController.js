@@ -247,3 +247,52 @@ export const changePassword = async (req, res, next) => {
     next(err);
   }
 };
+
+// ── Bulk Register ───────────────────────────────────────────────────────────────
+// POST /admin/faculty/bulk-register  { faculty: [{name, email, password}] }
+export const bulkRegister = async (req, res, next) => {
+  try {
+    const { faculty: rows } = req.body; // validated by Zod bulkRegisterSchema
+    const adminId = req.user?._id ?? null;
+
+    const created = [];
+    const skipped = []; // already exist
+    const failed  = []; // unexpected errors per row
+
+    // Process rows sequentially to keep DB writes orderly
+    for (const row of rows) {
+      try {
+        const existing = await User.findOne({ email: row.email });
+        if (existing) {
+          skipped.push({ email: row.email, reason: "Already exists" });
+          continue;
+        }
+
+        const hash = await bcrypt.hash(row.password, 10);
+        const newFaculty = await User.create({
+          name: row.name,
+          email: row.email,
+          password: hash,
+          createdBy: adminId,
+        });
+
+        // Fire welcome email non-blocking
+        sendWelcomeEmail(newFaculty);
+
+        created.push({ name: newFaculty.name, email: newFaculty.email });
+      } catch (rowErr) {
+        console.error(`[userController/bulkRegister] Row error for ${row.email}: ${rowErr.message}`);
+        failed.push({ email: row.email, reason: rowErr.message });
+      }
+    }
+
+    res.status(201).json({
+      message: `Bulk import complete: ${created.length} created, ${skipped.length} skipped, ${failed.length} failed.`,
+      summary: { created, skipped, failed },
+    });
+  } catch (err) {
+    console.error(`[userController/bulkRegister] Unhandled error | Type: ${err.name} | ${err.message}`);
+    next(err);
+  }
+};
+

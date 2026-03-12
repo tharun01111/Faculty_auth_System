@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Download,
 } from "lucide-react";
 
 // ─── Toast ───────────────────────────────────────────────────────────────────
@@ -201,6 +202,28 @@ const FacultyManagement = () => {
   const totalLocked = faculty.filter((f) => f.isLocked).length;
   const totalActive = faculty.filter((f) => !f.isLocked).length;
 
+  // ── Export CSV ─────────────────────────────────────────────────────────────
+  const handleExportCsv = () => {
+    if (!faculty.length) return;
+    const headers = ["Name", "Email", "Status", "Failed Logins", "Joined"];
+    const rows = faculty.map((f) => [
+      f.name || "",
+      f.email,
+      f.isLocked ? "Locked" : "Active",
+      f.failedLogin ?? 0,
+      formatDate(f.createdAt),
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `faculty_list_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-12">
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -252,16 +275,28 @@ const FacultyManagement = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={fetchFaculty}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleExportCsv}
+              disabled={loading || !faculty.length}
+            >
+              <Download className="h-3.5 w-3.5 text-emerald-500" />
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={fetchFaculty}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* ── Summary Stats ─────────────────────────────────────────────────── */}

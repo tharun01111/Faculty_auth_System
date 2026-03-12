@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
 import api from "../services/api.js";
 import ThemeToggle from "../components/ThemeToggle";
+import PasswordStrength from "../components/PasswordStrength";
 import {
   Card,
   CardContent,
@@ -16,6 +18,7 @@ import {
   School,
   ArrowLeft,
   UserPlus,
+  Users,
   Mail,
   Lock,
   User,
@@ -24,9 +27,62 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  UploadCloud,
+  FileSpreadsheet,
+  Download,
+  X,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 
-const RegisterFaculty = () => {
+// ── Tab button ────────────────────────────────────────────────────────────────
+const TabBtn = ({ active, onClick, icon: Icon, label }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+      active
+        ? "bg-primary text-primary-foreground shadow-sm"
+        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+    }`}
+  >
+    <Icon className="h-4 w-4" />
+    {label}
+  </button>
+);
+
+// ── Row status badge ───────────────────────────────────────────────────────────
+const RowBadge = ({ row }) => {
+  if (!row.name?.trim()) return <span className="text-xs text-rose-500 font-medium">Missing name</span>;
+  if (!row.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email))
+    return <span className="text-xs text-rose-500 font-medium">Invalid email</span>;
+  if (!row.password || row.password.length < 6)
+    return <span className="text-xs text-amber-500 font-medium">Password too short</span>;
+  return <span className="text-xs text-emerald-500 font-medium">✓ Ready</span>;
+};
+
+const isRowValid = (row) =>
+  row.name?.trim()?.length >= 2 &&
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email?.trim() ?? "") &&
+  row.password?.length >= 6;
+
+// ── Download template helper ───────────────────────────────────────────────────
+const downloadTemplate = () => {
+  const ws = XLSX.utils.aoa_to_sheet([
+    ["name", "email", "password"],
+    ["Dr. Ramesh Kumar", "ramesh@college.edu", "Welcome@123"],
+    ["Prof. Meera Nair", "meera@college.edu", "College#456"],
+  ]);
+  ws["!cols"] = [{ wch: 25 }, { wch: 28 }, { wch: 16 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Faculty");
+  XLSX.writeFile(wb, "faculty_import_template.xlsx");
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SINGLE REGISTER FORM
+// ══════════════════════════════════════════════════════════════════════════════
+const SingleForm = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [loading, setLoading] = useState(false);
@@ -35,13 +91,11 @@ const RegisterFaculty = () => {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const validate = () => {
     if (!form.name.trim()) return "Name is required.";
-    if (!form.email.trim()) return "Email is required.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Invalid email address.";
+    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Invalid email address.";
     if (form.password.length < 6) return "Password must be at least 6 characters.";
     if (form.password !== form.confirm) return "Passwords do not match.";
     return null;
@@ -51,13 +105,8 @@ const RegisterFaculty = () => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-
-    const validationErr = validate();
-    if (validationErr) {
-      setError(validationErr);
-      return;
-    }
-
+    const err = validate();
+    if (err) { setError(err); return; }
     setLoading(true);
     try {
       const res = await api.post("/faculty/register", {
@@ -76,243 +125,396 @@ const RegisterFaculty = () => {
   };
 
   return (
+    <div className="grid gap-8 lg:grid-cols-5">
+      {/* Info panel */}
+      <div className="lg:col-span-2">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
+          <UserPlus className="h-6 w-6 text-emerald-500" />
+        </div>
+        <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground">Add New Faculty</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Create a single faculty account. The account will be immediately active.
+        </p>
+        <div className="mt-6 space-y-3">
+          {["Password is securely hashed (bcrypt)", "Account is active immediately", "Welcome email is sent automatically", "You can manage accounts later"].map((p) => (
+            <div key={p} className="flex items-start gap-2 text-xs text-muted-foreground">
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+              {p}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Form */}
+      <div className="lg:col-span-3">
+        <Card className="border-border">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">Faculty Details</CardTitle>
+            <CardDescription>All fields are required. Use the faculty member's institutional email.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="grid gap-5">
+              <div className="grid gap-1.5">
+                <Label htmlFor="name" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <User className="h-3.5 w-3.5" /> Full Name
+                </Label>
+                <Input id="name" name="name" placeholder="Dr. Jane Smith" value={form.name} onChange={handleChange} disabled={loading} required />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="email" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Mail className="h-3.5 w-3.5" /> Email Address
+                </Label>
+                <Input id="email" name="email" type="email" placeholder="faculty@college.edu" value={form.email} onChange={handleChange} disabled={loading} required />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="password" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Lock className="h-3.5 w-3.5" /> Password
+                </Label>
+                <div className="relative">
+                  <Input id="password" name="password" type={showPass ? "text" : "password"} placeholder="Min. 6 characters" value={form.password} onChange={handleChange} disabled={loading} className="pr-10" required />
+                  <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" tabIndex={-1}>
+                    {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <PasswordStrength password={form.password} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="confirm" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Lock className="h-3.5 w-3.5" /> Confirm Password
+                </Label>
+                <div className="relative">
+                  <Input id="confirm" name="confirm" type={showConfirm ? "text" : "password"} placeholder="Repeat password" value={form.confirm} onChange={handleChange} disabled={loading} className="pr-10" required />
+                  <button type="button" onClick={() => setShowConfirm((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" tabIndex={-1}>
+                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs text-destructive">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {error}
+                </div>
+              )}
+              {success && (
+                <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-xs text-emerald-700 dark:text-emerald-400">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {success} Redirecting…
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => navigate("/admin/dashboard")} disabled={loading}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1 gap-2" disabled={loading || !!success}>
+                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Registering…</> : <><UserPlus className="h-4 w-4" /> Register Faculty</>}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BULK IMPORT FORM
+// ══════════════════════════════════════════════════════════════════════════════
+const BulkForm = () => {
+  const [rows, setRows] = useState([]);
+  const [dragging, setDragging] = useState(false);
+  const [fileName, setFileName] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null); // bulk response summary
+  const [parseError, setParseError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const parseFile = useCallback((file) => {
+    setParseError(null);
+    setResult(null);
+
+    if (!file) return;
+    const allowedTypes = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "text/csv",
+    ];
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+      setParseError("Please upload a .xlsx, .xls, or .csv file.");
+      return;
+    }
+
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+        if (!data.length) {
+          setParseError("The file appears to be empty.");
+          return;
+        }
+
+        // Normalize column names (lowercase, trim)
+        const normalized = data.map((row) => {
+          const lower = {};
+          Object.keys(row).forEach((k) => {
+            lower[k.trim().toLowerCase()] = String(row[k]).trim();
+          });
+          return { name: lower["name"] || "", email: lower["email"] || "", password: lower["password"] || "" };
+        });
+
+        setRows(normalized);
+      } catch (err) {
+        setParseError("Could not parse the file. Make sure it's a valid Excel or CSV file.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }, []);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    parseFile(e.dataTransfer.files[0]);
+  };
+
+  const validRows = rows.filter(isRowValid);
+  const invalidCount = rows.length - validRows.length;
+
+  const handleSubmit = async () => {
+    if (!validRows.length) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await api.post("/admin/faculty/bulk-register", { faculty: validRows });
+      setResult(res.data);
+    } catch (err) {
+      setResult({ error: err.response?.data?.message || "Failed to import faculty." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClear = () => {
+    setRows([]);
+    setFileName(null);
+    setResult(null);
+    setParseError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-5">
+      {/* Info panel */}
+      <div className="lg:col-span-2">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
+          <Sparkles className="h-6 w-6 text-violet-500" />
+        </div>
+        <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground">Bulk Import</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Upload an Excel or CSV file to create multiple faculty accounts at once.
+        </p>
+        <div className="mt-6 space-y-3">
+          {["Accepts .xlsx, .xls, and .csv files", "Preview rows before submitting", "Duplicates are skipped automatically", "Welcome email sent per created account", "Max 200 rows per import"].map((p) => (
+            <div key={p} className="flex items-start gap-2 text-xs text-muted-foreground">
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-500" />
+              {p}
+            </div>
+          ))}
+        </div>
+        <Button variant="outline" size="sm" className="mt-6 gap-2 w-full" onClick={downloadTemplate}>
+          <Download className="h-3.5 w-3.5 text-violet-500" />
+          Download Template (.xlsx)
+        </Button>
+      </div>
+
+      {/* Upload + Preview */}
+      <div className="lg:col-span-3 space-y-4">
+        {/* Drop zone */}
+        {!rows.length && (
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-14 cursor-pointer transition-colors ${
+              dragging
+                ? "border-violet-500 bg-violet-500/5"
+                : "border-border hover:border-violet-500/50 hover:bg-muted/30"
+            }`}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
+              <UploadCloud className="h-6 w-6 text-violet-500" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">Drop your file here or click to browse</p>
+              <p className="mt-1 text-xs text-muted-foreground">Supports .xlsx, .xls, .csv — max 200 rows</p>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => parseFile(e.target.files[0])}
+            />
+          </div>
+        )}
+
+        {parseError && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {parseError}
+          </div>
+        )}
+
+        {/* Preview table */}
+        {rows.length > 0 && !result && (
+          <Card className="border-border">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3 pt-4">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4 text-violet-500" />
+                <div>
+                  <CardTitle className="text-sm">{fileName}</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    {rows.length} rows · {validRows.length} valid · {invalidCount > 0 ? `${invalidCount} with issues` : "all ready"}
+                  </CardDescription>
+                </div>
+              </div>
+              <button onClick={handleClear} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="max-h-72 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 border-b border-border bg-muted/60">
+                    <tr>
+                      <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">#</th>
+                      <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">Name</th>
+                      <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">Email</th>
+                      <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">Password</th>
+                      <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {rows.map((row, i) => (
+                      <tr key={i} className={`transition-colors ${isRowValid(row) ? "hover:bg-muted/10" : "bg-rose-500/5"}`}>
+                        <td className="px-4 py-2.5 font-mono text-muted-foreground">{i + 1}</td>
+                        <td className="px-4 py-2.5 font-medium text-foreground">{row.name || <span className="text-muted-foreground italic">—</span>}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{row.email || <span className="italic">—</span>}</td>
+                        <td className="px-4 py-2.5">
+                          <span className="font-mono text-muted-foreground tracking-widest">{row.password ? "••••••••" : "—"}</span>
+                        </td>
+                        <td className="px-4 py-2.5"><RowBadge row={row} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Warning about invalid rows */}
+        {rows.length > 0 && invalidCount > 0 && !result && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            {invalidCount} row{invalidCount > 1 ? "s" : ""} will be skipped due to validation issues. Only {validRows.length} valid row{validRows.length !== 1 ? "s" : ""} will be submitted.
+          </div>
+        )}
+
+        {/* Result summary */}
+        {result && !result.error && (
+          <Card className="border-emerald-500/30 bg-emerald-500/5">
+            <CardContent className="pt-5 pb-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                <p className="font-semibold text-foreground">Import Complete</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Created", count: result.summary?.created?.length ?? 0, color: "text-emerald-600 dark:text-emerald-400" },
+                  { label: "Skipped", count: result.summary?.skipped?.length ?? 0, color: "text-amber-600 dark:text-amber-400" },
+                  { label: "Failed", count: result.summary?.failed?.length ?? 0, color: "text-rose-600 dark:text-rose-400" },
+                ].map(({ label, count, color }) => (
+                  <div key={label} className="rounded-lg border border-border bg-card p-3 text-center">
+                    <p className={`text-2xl font-bold ${color}`}>{count}</p>
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" size="sm" className="w-full gap-2" onClick={handleClear}>
+                <UploadCloud className="h-3.5 w-3.5" /> Import Another File
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {result?.error && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {result.error}
+          </div>
+        )}
+
+        {/* Submit bar */}
+        {rows.length > 0 && !result && (
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || validRows.length === 0}
+            className="w-full gap-2"
+          >
+            {loading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Importing…</>
+            ) : (
+              <><Users className="h-4 w-4" /> Import {validRows.length} Faculty Account{validRows.length !== 1 ? "s" : ""}</>
+            )}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PAGE SHELL
+// ══════════════════════════════════════════════════════════════════════════════
+const RegisterFaculty = () => {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState("single");
+
+  return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
               <School className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Admin Portal
-              </p>
-              <h1 className="text-sm font-bold leading-tight tracking-tight text-foreground sm:text-base">
-                Register Faculty
-              </h1>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Admin Portal</p>
+              <h1 className="text-sm font-bold leading-tight tracking-tight text-foreground sm:text-base">Register Faculty</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:inline">
-              ● Admin
-            </span>
+            <span className="hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:inline">● Admin</span>
             <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        {/* Back button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mb-6 -ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
-          onClick={() => navigate("/admin/dashboard")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <Button variant="ghost" size="sm" className="mb-6 -ml-2 gap-1.5 text-muted-foreground hover:text-foreground" onClick={() => navigate("/admin/dashboard")}>
+          <ArrowLeft className="h-4 w-4" /> Back to Dashboard
         </Button>
 
-        <div className="grid gap-8 lg:grid-cols-5">
-          {/* Left info panel */}
-          <div className="lg:col-span-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
-              <UserPlus className="h-6 w-6 text-emerald-500" />
-            </div>
-            <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground">
-              Add New Faculty
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Create a new faculty account. The account will be immediately
-              active and the faculty member can log in using these credentials.
-            </p>
-            <div className="mt-6 space-y-3">
-              {[
-                "Password is securely hashed (bcrypt)",
-                "Account is active immediately",
-                "Faculty can log in at the Faculty Portal",
-                "You can unlock/manage accounts later",
-              ].map((point) => (
-                <div key={point} className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                  {point}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Form */}
-          <div className="lg:col-span-3">
-            <Card className="border-border">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base">Faculty Details</CardTitle>
-                <CardDescription>
-                  All fields are required. Use the faculty member's institutional email.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="grid gap-5">
-                  {/* Name */}
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="name" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <User className="h-3.5 w-3.5" /> Full Name
-                    </Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      type="text"
-                      placeholder="Dr. Jane Smith"
-                      value={form.name}
-                      onChange={handleChange}
-                      disabled={loading}
-                      required
-                    />
-                  </div>
-
-                  {/* Email */}
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="email" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5" /> Email Address
-                    </Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="faculty@college.edu"
-                      value={form.email}
-                      onChange={handleChange}
-                      disabled={loading}
-                      required
-                    />
-                  </div>
-
-                  {/* Password */}
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="password" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <Lock className="h-3.5 w-3.5" /> Password
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        name="password"
-                        type={showPass ? "text" : "password"}
-                        placeholder="Min. 6 characters"
-                        value={form.password}
-                        onChange={handleChange}
-                        disabled={loading}
-                        className="pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPass((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        tabIndex={-1}
-                      >
-                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="confirm" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <Lock className="h-3.5 w-3.5" /> Confirm Password
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="confirm"
-                        name="confirm"
-                        type={showConfirm ? "text" : "password"}
-                        placeholder="Repeat password"
-                        value={form.confirm}
-                        onChange={handleChange}
-                        disabled={loading}
-                        className="pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirm((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        tabIndex={-1}
-                      >
-                        {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Password strength visual */}
-                  {form.password && (
-                    <div className="space-y-1">
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4].map((n) => (
-                          <div
-                            key={n}
-                            className={`h-1 flex-1 rounded-full transition-colors ${
-                              form.password.length >= n * 3
-                                ? n <= 2 ? "bg-amber-500" : "bg-emerald-500"
-                                : "bg-muted"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        {form.password.length < 6
-                          ? "Too short"
-                          : form.password.length < 9
-                          ? "Weak"
-                          : form.password.length < 12
-                          ? "Good"
-                          : "Strong"}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Error / Success */}
-                  {error && (
-                    <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs text-destructive">
-                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      {error}
-                    </div>
-                  )}
-                  {success && (
-                    <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-xs text-emerald-700 dark:text-emerald-400">
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      {success} Redirecting…
-                    </div>
-                  )}
-
-                  <div className="flex gap-3 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => navigate("/admin/dashboard")}
-                      disabled={loading}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" className="flex-1 gap-2" disabled={loading || !!success}>
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Registering…
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4" />
-                          Register Faculty
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Tab switcher */}
+        <div className="mb-8 flex items-center gap-2 rounded-xl border border-border bg-card p-1.5 w-fit shadow-sm">
+          <TabBtn active={tab === "single"} onClick={() => setTab("single")} icon={UserPlus} label="Single" />
+          <TabBtn active={tab === "bulk"} onClick={() => setTab("bulk")} icon={FileSpreadsheet} label="Bulk Import" />
         </div>
+
+        {tab === "single" ? <SingleForm /> : <BulkForm />}
       </div>
     </div>
   );
