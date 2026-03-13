@@ -7,6 +7,8 @@ import connectDb from "./config/db.js";
 import facultyRoutes from "./routes/faculty.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorMiddleware.js";
+import cookieParser from "cookie-parser";
+import { pruneOldLogs } from "./utils/cleanupLogs.js";
 
 dotenv.config();
 
@@ -32,6 +34,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(cookieParser());
 
 // ── Security Headers (Helmet) ─────────────────────────────────────────────
 // Sets 14 security-related HTTP headers automatically.
@@ -55,7 +58,9 @@ const loginLimiter = rateLimit({
 });
 
 // Database Connection
-connectDb();
+connectDb().then(() => {
+  pruneOldLogs();
+});
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 // Apply rate limiter only to login routes

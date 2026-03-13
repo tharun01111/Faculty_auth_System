@@ -8,6 +8,7 @@ import {
   deleteFaculty,
   getLoginLogs,
   getChartData,
+  adminLogout,
 } from "../controllers/adminController.js";
 import { register, bulkRegister } from "../controllers/userController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
@@ -17,7 +18,8 @@ import { loginSchema, adminRegisterSchema, bulkRegisterSchema } from "../schemas
 const router = express.Router();
 
 router.post("/login", validate(loginSchema), adminLogin);
-router.post("/register", validate(adminRegisterSchema), adminRegister);
+router.post("/logout", adminLogout);
+router.post("/register", protect, adminOnly, validate(adminRegisterSchema), adminRegister);
 router.get("/stats", protect, adminOnly, getAdminStats);
 
 // Faculty management (admin-only)

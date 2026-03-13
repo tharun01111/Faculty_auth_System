@@ -36,16 +36,18 @@ import {
 } from "recharts";
 
 // ── Skeleton placeholder ──────────────────────────────────────────────────────
+const shimmerClass = "animate-shimmer bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:400%_100%]";
+
 const StatSkeleton = () => (
   <Card className="border-border bg-card">
     <CardContent className="pt-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="h-3 w-24 rounded bg-muted animate-pulse" />
-          <div className="mt-2 h-8 w-14 rounded bg-muted animate-pulse" />
-          <div className="mt-1.5 h-3 w-32 rounded bg-muted animate-pulse" />
+          <div className={`h-3 w-24 rounded ${shimmerClass}`} />
+          <div className={`mt-2 h-8 w-14 rounded ${shimmerClass}`} />
+          <div className={`mt-1.5 h-3 w-32 rounded ${shimmerClass}`} />
         </div>
-        <div className="h-10 w-10 shrink-0 rounded-lg bg-muted animate-pulse" />
+        <div className={`h-10 w-10 shrink-0 rounded-lg ${shimmerClass}`} />
       </div>
     </CardContent>
   </Card>
@@ -56,7 +58,7 @@ const ChartSkeleton = () => (
     {[60, 85, 40, 70, 55, 90, 45].map((h, i) => (
       <div
         key={i}
-        className="flex-1 rounded-t bg-muted animate-pulse"
+        className={`flex-1 rounded-t ${shimmerClass}`}
         style={{ height: `${h}%` }}
       />
     ))}
@@ -290,8 +292,8 @@ const AdminDashboard = () => {
                       <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                       <Tooltip content={<BarTooltip />} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
                       <Legend wrapperStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }} iconType="circle" iconSize={8} />
-                      <Bar dataKey="success" name="Success" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="failure" name="Failure" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="success" name="Success" fill="#22c55e" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
+                      <Bar dataKey="failure" name="Failure" fill="#f43f5e" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -307,12 +309,12 @@ const AdminDashboard = () => {
               <div className="h-56">
                 {chartsLoading ? (
                   <div className="flex h-full items-center justify-center">
-                    <div className="h-36 w-36 rounded-full border-[10px] border-muted animate-pulse" />
+                    <div className={`h-36 w-36 rounded-full border-[10px] border-transparent p-1 ${shimmerClass} [mask-image:radial-gradient(transparent_55%,black_56%)]`} />
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={pieData ?? []} cx="50%" cy="45%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                      <Pie data={pieData ?? []} cx="50%" cy="45%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value" strokeWidth={0} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out">
                         {(pieData ?? []).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}

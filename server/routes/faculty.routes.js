@@ -5,6 +5,7 @@ import {
   forgotPassword,
   resetPassword,
   changePassword,
+  logout,
 } from "../controllers/userController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 import { validate } from "../middleware/validateRequest.js";
@@ -20,6 +21,7 @@ const router = express.Router();
 
 // Public: Faculty login
 router.post("/login", validate(loginSchema), login);
+router.post("/logout", logout);
 
 // Public: Forgot / reset password
 router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);

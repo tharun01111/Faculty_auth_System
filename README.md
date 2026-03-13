@@ -14,11 +14,13 @@ A secure, modern, full-stack web application for managing Faculty and Admin auth
 - **Smart Redirects** — Login pages redirect already-authenticated users to their dashboard
 
 ### Security
+- **HttpOnly Cookies** — JWTs are stored securely in HttpOnly cookies to protect against XSS attacks
 - **Password Hashing** — bcryptjs (10 salt rounds)
-- **Account Locking** — Auto-locks after 3 failed login attempts; admin can unlock
+- **Account Auto-Locking** — Auto-locks after 3 failed login attempts with a 15-minute cooldown (`lockUntil`) before automatic unlock (admin can also manually unlock)
+- **Admin Registration Security** — Strict route protection on endpoints preventing unauthorized admin accounts
 - **Rate Limiting** — Max 10 login attempts per IP per 15 minutes (returns `429`)
 - **Hardened CORS** — Only the configured client origin is allowed
-- **Login Audit Trail** — Every attempt (Success/Failure) logged with email, IP, User Agent, and timestamp
+- **Login Audit Trail** — Every attempt (Success/Failure) logged with email, IP, User Agent, and timestamp. Includes automated 30-day purge scripts
 - **Last Login Tracking** — `lastLogin` timestamp stored per faculty account and shown on the dashboard
 - **Role Sealed in JWT** — Role is determined by the backend and embedded in the signed token — never trusted from the frontend
 
@@ -31,18 +33,15 @@ A secure, modern, full-stack web application for managing Faculty and Admin auth
 - **Email Notifications** — Automated emails on account creation, lock, and unlock events (via Resend API)
 
 ### UI / UX
-- **Dark / Light Mode** — Theme toggle on every page
-- **Fully Theme-Aware** — All pages use CSS token classes (no hardcoded colors)
-- **Responsive Design** — Mobile-friendly layouts across all pages
-- **Password Visibility Toggle** — Show/hide password on the login form
-- **Context-Aware Error Banners** — Amber warning for locked accounts, red for invalid credentials
-- **Shake Animation** — Error banner shakes on each new login failure
-- **Loading Skeletons** — Admin dashboard stat cards and charts show skeleton placeholders while fetching
-- **Recharts Analytics** — Custom-styled Recharts components with theme-aware tooltips, responsive containers, and animated transitions
-- **Refresh Button** — Re-fetch admin stats and chart data on demand without a full page reload
+- **Dark / Light Mode & Glassmorphism** — OLED-friendly dark mode base (`#121212`) and frosted glass surfaces (`backdrop-blur-md`)
+- **Advanced Loading States** — Animated CSS shimmer skeletons, cascading staggered row loading, and `nprogress` route transition bars
+- **Haptic Feedback & Toasts** — Sliding `sonner` toast notifications and context-aware 401/403 event handling for seamless SPA experience
+- **Micro-interactions** — Buttons feature `active:scale-[0.98]` physical press states, contextual 1.5-second success feedback loops, and card hover lift effects
+- **Simulated "Live Log"** — Bulk import results are displayed via an animated, sequentially-staggered stream of successes and failures
+- **A11y & Keyboard Shortcuts** — Press `/` to focus search, icon-only buttons wrapped in native Tooltips, segmented visual password strength indicator
+- **Animated Analytics** — Custom-styled Recharts components with explicit entrance animations (`isAnimationActive`), responsive containers, and theme-aware tooltips
 - **Animated Portal Selector** — Soft gradient orb background and "All systems operational" status badge
 - **Time-of-Day Greeting** — Faculty dashboard says "Good morning / afternoon / evening"
-- **Micro-interactions** — Loading spinners, auto-dismissing toasts, delete confirmation modals
 
 ---
 
@@ -161,7 +160,16 @@ Mini_Project/
 - MongoDB (local or Atlas URI)
 - Resend API key *(optional — emails are skipped gracefully without it)*
 
-### 1. Backend Setup
+### Quick Start (Recommended)
+From the root directory, run the monorepo script to launch both client and server concurrently:
+```bash
+npm install
+npm run dev
+```
+
+### Manual Setup
+
+**1. Backend**
 ```bash
 cd server
 npm install
@@ -178,7 +186,7 @@ RESEND_API_KEY=re_your_resend_key        # optional
 ADMIN_EMAIL=you@yourdomain.com           # optional — sender address
 ```
 
-### 2. Frontend Setup
+**2. Frontend**
 ```bash
 cd client
 npm install

@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import api from "../services/api.js";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -16,36 +19,39 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+const resetSchema = z.object({
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirm: z.string()
+}).refine(data => data.password === data.confirm, {
+  message: "Passwords do not match.",
+  path: ["confirm"]
+});
+
 const ResetPassword = () => {
   const { token } = useParams();
   const navigate = useNavigate();
 
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm({
+    resolver: zodResolver(resetSchema),
+    defaultValues: { password: "", confirm: "" }
+  });
+
+  const onSubmit = async (data) => {
     setError(null);
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
-    if (password !== confirm) {
-      setError("Passwords do not match.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      await api.post(`faculty/reset-password/${token}`, { password });
+      await api.post(`faculty/reset-password/${token}`, { password: data.password });
       setSuccess(true);
     } catch (err) {
       const message =
@@ -113,7 +119,7 @@ const ResetPassword = () => {
             </div>
           ) : (
             /* Form state */
-            <form onSubmit={handleSubmit} className="grid gap-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
               {/* New password */}
               <div className="grid gap-1.5">
                 <Label
@@ -127,10 +133,9 @@ const ResetPassword = () => {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Min. 6 characters"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    {...register("password")}
                     className="bg-background pr-10"
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -146,6 +151,7 @@ const ResetPassword = () => {
                     )}
                   </button>
                 </div>
+                {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
               </div>
 
               {/* Confirm password */}
@@ -161,10 +167,9 @@ const ResetPassword = () => {
                     id="confirm"
                     type={showConfirm ? "text" : "password"}
                     placeholder="Re-enter your new password"
-                    required
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
+                    {...register("confirm")}
                     className="bg-background pr-10"
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -180,14 +185,9 @@ const ResetPassword = () => {
                     )}
                   </button>
                 </div>
+                {errors.confirm && <p className="text-xs text-destructive">{errors.confirm.message}</p>}
               </div>
 
-              {/* Password strength hint */}
-              {password.length > 0 && password.length < 6 && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Password must be at least 6 characters
-                </p>
-              )}
 
               {error && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs text-destructive">

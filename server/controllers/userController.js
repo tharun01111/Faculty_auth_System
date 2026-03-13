@@ -10,6 +10,12 @@ import {
 } from "../services/emailService.js";
 
 const MAX_ATTEMPTS = 3;
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV !== "development",
+  sameSite: "strict",
+  maxAge: 24 * 60 * 60 * 1000, // 1 day
+};
 
 export const login = async (req, res, next) => {
   try {
@@ -31,12 +37,25 @@ export const login = async (req, res, next) => {
 
     // Account locked
     if (user.isLocked) {
-      try {
-        await logAttempt(user, "FAILURE", ipAddress, userAgent);
-      } catch (logErr) {
-        console.error("[userController/login] Log creation failed (locked):", logErr.message);
+      if (user.lockUntil && user.lockUntil > new Date()) {
+        const remainingTime = Math.ceil((user.lockUntil - new Date()) / 1000 / 60);
+        try {
+          await logAttempt(user, "FAILURE", ipAddress, userAgent);
+        } catch (logErr) {}
+        return res.status(403).json({ message: `Account is locked. Try again in ${remainingTime} minutes.` });
+      } else if (user.lockUntil && user.lockUntil <= new Date()) {
+        // Unlock account naturally
+        user.isLocked = false;
+        user.failedLogin = 0;
+        user.lockUntil = null;
+        await user.save();
+      } else {
+        // Indefinitely locked (lockUntil is null but isLocked is true)
+        try {
+          await logAttempt(user, "FAILURE", ipAddress, userAgent);
+        } catch (logErr) {}
+        return res.status(403).json({ message: "Account is locked. Contact admin." });
       }
-      return res.status(403).json({ message: "Account is locked. Contact admin" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -48,6 +67,8 @@ export const login = async (req, res, next) => {
       const justLocked = user.failedLogin >= MAX_ATTEMPTS;
       if (justLocked) {
         user.isLocked = true;
+        // Lock out for 15 minutes by default
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
       }
 
       await user.save();
@@ -69,6 +90,7 @@ export const login = async (req, res, next) => {
     // Successful login
     user.failedLogin = 0;
     user.isLocked = false;
+    user.lockUntil = null;
     user.lastLogin = new Date();
     await user.save();
 
@@ -82,9 +104,10 @@ export const login = async (req, res, next) => {
       console.error("[userController/login] Log creation failed (success):", logErr.message);
     }
 
+    res.cookie("jwt", token, cookieOptions);
+
     res.status(200).json({
       message: "Login successful",
-      token,
       role: canonicalRole,
       lastLogin: user.lastLogin,
       name: user.name,
@@ -93,6 +116,14 @@ export const login = async (req, res, next) => {
     console.error(`[userController/login] Unhandled error | Type: ${err.name} | ${err.message}`);
     next(err);
   }
+};
+
+export const logout = (req, res) => {
+  res.cookie("jwt", "", {
+    httpOnly: true,
+    expires: new Date(0),
+  });
+  res.status(200).json({ message: "Successfully logged out" });
 };
 
 export const register = async (req, res, next) => {
@@ -200,7 +231,7 @@ export const resetPassword = async (req, res, next) => {
 
 const makeToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: "2h",
+    expiresIn: process.env.JWT_EXPIRES_IN || "1d",
   });
 };
 
@@ -259,32 +290,43 @@ export const bulkRegister = async (req, res, next) => {
     const skipped = []; // already exist
     const failed  = []; // unexpected errors per row
 
-    // Process rows sequentially to keep DB writes orderly
-    for (const row of rows) {
-      try {
-        const existing = await User.findOne({ email: row.email });
-        if (existing) {
-          skipped.push({ email: row.email, reason: "Already exists" });
-          continue;
-        }
-
-        const hash = await bcrypt.hash(row.password, 10);
-        const newFaculty = await User.create({
-          name: row.name,
-          email: row.email,
-          password: hash,
-          createdBy: adminId,
-        });
-
-        // Fire welcome email non-blocking
-        sendWelcomeEmail(newFaculty);
-
-        created.push({ name: newFaculty.name, email: newFaculty.email });
-      } catch (rowErr) {
-        console.error(`[userController/bulkRegister] Row error for ${row.email}: ${rowErr.message}`);
-        failed.push({ email: row.email, reason: rowErr.message });
+    // Process rows in parallel using Promise.allSettled for much better performance
+    const promises = rows.map(async (row) => {
+      const existing = await User.findOne({ email: row.email });
+      if (existing) {
+        return { status: "skipped", email: row.email, reason: "Already exists" };
       }
-    }
+
+      const hash = await bcrypt.hash(row.password, 10);
+      const newFaculty = await User.create({
+        name: row.name,
+        email: row.email,
+        password: hash,
+        createdBy: adminId,
+      });
+
+      // Fire welcome email non-blocking
+      sendWelcomeEmail(newFaculty);
+
+      return { status: "created", name: newFaculty.name, email: newFaculty.email };
+    });
+
+    const results = await Promise.allSettled(promises);
+
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        const row = rows[index];
+        console.error(`[userController/bulkRegister] Row error for ${row.email}: ${result.reason.message}`);
+        failed.push({ email: row.email, reason: result.reason.message });
+      } else {
+        const value = result.value;
+        if (value.status === "skipped") {
+          skipped.push({ email: value.email, reason: value.reason });
+        } else if (value.status === "created") {
+          created.push({ name: value.name, email: value.email });
+        }
+      }
+    });
 
     res.status(201).json({
       message: `Bulk import complete: ${created.length} created, ${skipped.length} skipped, ${failed.length} failed.`,

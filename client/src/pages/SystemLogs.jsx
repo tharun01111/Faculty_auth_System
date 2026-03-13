@@ -261,12 +261,13 @@ const SystemLogs = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {logs.map((log) => (
+                    {logs.map((log, index) => (
                       <tr
                         key={log._id}
-                        className={`transition-colors hover:bg-muted/20 ${
+                        className={`animate-fade-in transition-colors hover:bg-muted/20 outline-none ${
                           log.status === "FAILURE" ? "bg-rose-500/5" : ""
                         }`}
+                        style={{ animationDelay: `${index * 30}ms` }}
                       >
                         <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-muted-foreground">
                           {formatDate(log.createdAt)}

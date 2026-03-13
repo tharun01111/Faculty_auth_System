@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import api from "../services/api.js";
 import ThemeToggle from "../components/ThemeToggle";
 
@@ -59,23 +62,37 @@ const Spinner = () => (
   </svg>
 );
 
+const forgotSchema = z.object({
+  email: z.string().trim().email("Must be a valid email address").toLowerCase(),
+});
+
 /* ─── Component ───────────────────────────────────────────────────────────── */
 const ForgotPassword = () => {
-  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors }
+  } = useForm({
+    resolver: zodResolver(forgotSchema),
+    defaultValues: { email: "" }
+  });
+
+  const emailValue = watch("email", "");
+
+  const onSubmit = async (data) => {
     setError(null);
     setNotFound(false);
     setLoading(true);
 
     try {
-      await api.post("faculty/forgot-password", { email });
+      await api.post("faculty/forgot-password", { email: data.email });
       setSuccess(true);
     } catch (err) {
       const status = err.response?.status;
@@ -123,7 +140,7 @@ const ForgotPassword = () => {
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">Check your inbox</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   A reset link was sent to<br />
-                  <span className="font-medium text-foreground">{email}</span>
+                  <span className="font-medium text-foreground">{emailValue}</span>
                 </p>
               </div>
               <p className="text-xs text-muted-foreground border border-border/60 rounded-lg px-4 py-2.5 bg-muted/40">
@@ -158,7 +175,7 @@ const ForgotPassword = () => {
             <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
               <div className="h-px w-full bg-gradient-to-r from-indigo-500/40 via-purple-500/40 to-transparent" />
 
-              <form onSubmit={handleSubmit} className="px-6 py-6 space-y-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-6 space-y-4">
                 {/* Email field */}
                 <div className="space-y-1.5">
                   <label
@@ -172,29 +189,29 @@ const ForgotPassword = () => {
                     id="email"
                     type="email"
                     placeholder="faculty@college.edu"
-                    required
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setNotFound(false);
-                      setError(null);
-                    }}
+                    {...register("email", {
+                      onChange: () => {
+                        setNotFound(false);
+                        setError(null);
+                      }
+                    })}
                     className={`w-full rounded-xl border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors focus:ring-1 ${
-                      notFound
+                      notFound || errors.email
                         ? "border-amber-500/60 focus:ring-amber-500/40"
                         : "border-border focus:ring-indigo-500/40 focus:border-indigo-500/60"
                     }`}
                   />
+                  {errors.email && <p className="text-xs text-amber-600 dark:text-amber-400">{errors.email.message}</p>}
                 </div>
 
                 {/* Not-found error — email-specific callout */}
-                {notFound && (
+                {notFound && !errors.email && (
                   <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3">
                     <span className="mt-0.5 shrink-0 text-amber-500"><IconUserX /></span>
                     <div>
                       <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">Account not found</p>
                       <p className="mt-0.5 text-xs text-amber-600/80 dark:text-amber-400/80">
-                        No faculty account is registered with <strong>{email}</strong>.
+                        No faculty account is registered with <strong>{emailValue}</strong>.
                         Please check the email or contact your administrator.
                       </p>
                     </div>

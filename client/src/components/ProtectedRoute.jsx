@@ -3,11 +3,18 @@ import { Navigate, Outlet } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import Loading from "./Loading";
 
-const ProtectedRoute = ({ allowedRoles = [] }) => {
+const ProtectedRoute = ({ type = "private", allowedRoles = [], redirectTo = "/", children }) => {
   const { isAuth, role, loading } = useContext(AuthContext);
 
   if (loading) {
     return <Loading />;
+  }
+
+  if (type === "public") {
+    if (isAuth) {
+      return <Navigate to={redirectTo} replace />;
+    }
+    return children ? children : <Outlet />;
   }
 
   if (!isAuth) {
@@ -18,7 +25,7 @@ const ProtectedRoute = ({ allowedRoles = [] }) => {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  return <Outlet />;
+  return children ? children : <Outlet />;
 };
 
 export default ProtectedRoute;

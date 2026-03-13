@@ -15,8 +15,9 @@ const calculateStrength = (password) => {
 
 const getStrengthDetails = (score) => {
   if (score === 0) return { label: "Enter password", color: "bg-muted text-muted-foreground" };
-  if (score <= 2) return { label: "Weak", color: "bg-rose-500 text-rose-500" };
-  if (score <= 4) return { label: "Fair", color: "bg-amber-500 text-amber-500" };
+  if (score === 1) return { label: "Weak", color: "bg-rose-500 text-rose-500" };
+  if (score === 2) return { label: "Fair", color: "bg-orange-500 text-orange-500" };
+  if (score === 3) return { label: "Good", color: "bg-amber-500 text-amber-500" };
   return { label: "Strong", color: "bg-emerald-500 text-emerald-500" };
 };
 
@@ -27,14 +28,21 @@ export default function PasswordStrength({ password }) {
   return (
     <div className="mt-2 space-y-2">
       <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((level) => (
-          <div
-            key={level}
-            className={`h-1.5 flex-1 rounded-full transition-colors ${
-              score >= level ? details.color.split(" ")[0] : "bg-muted"
-            }`}
-          />
-        ))}
+        {[1, 2, 3, 4].map((level) => {
+          let segmentColor = "bg-muted";
+          if (score >= level) {
+             if (level === 1) segmentColor = "bg-rose-500";
+             else if (level === 2) segmentColor = "bg-orange-500";
+             else if (level === 3) segmentColor = "bg-amber-500";
+             else if (level === 4) segmentColor = "bg-emerald-500";
+          }
+          return (
+            <div
+              key={level}
+              className={`h-1.5 flex-1 rounded-full transition-colors ${segmentColor}`}
+            />
+          );
+        })}
       </div>
       <div className="flex items-center justify-between text-xs">
         <span className={`font-medium ${details.color.split(" ")[1]}`}>

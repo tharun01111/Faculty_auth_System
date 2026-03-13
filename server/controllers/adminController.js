@@ -5,6 +5,13 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sendWelcomeEmail, sendAccountUnlockedEmail } from "../services/emailService.js";
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV !== "development",
+  sameSite: "strict",
+  maxAge: 24 * 60 * 60 * 1000, // 1 day
+};
+
 export const adminRegister = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -47,18 +54,28 @@ export const adminLogin = async (req, res, next) => {
 
     const token = await makeToken(admin);
 
-    res.status(200).json({ message: "Successfully logged in", token, role: "admin", name: admin.name });
+    res.cookie("jwt", token, cookieOptions);
+
+    res.status(200).json({ message: "Successfully logged in", role: "admin", name: admin.name });
   } catch (err) {
     console.error(`[adminController/adminLogin] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
 
+export const adminLogout = (req, res) => {
+  res.cookie("jwt", "", {
+    httpOnly: true,
+    expires: new Date(0),
+  });
+  res.status(200).json({ message: "Successfully logged out" });
+};
+
 const makeToken = async (admin) => {
   return jwt.sign(
     { id: admin._id, role: "admin" },
     process.env.JWT_SECRET,
-    { expiresIn: "1d" }
+    { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
   );
 };
 

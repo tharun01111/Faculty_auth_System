@@ -1,9 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useContext } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useContext, useEffect } from "react";
+import NProgress from "nprogress";
+import { Toaster } from "sonner";
 import { AuthProvider, AuthContext } from "./context/AuthContext.jsx";
-import AuthBoundary from "./utils/AuthBoundary.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import PublicOnlyGate from "./services/PublicOnlyGate.jsx";
 
 import PortalSelector from "./pages/PortalSelector.jsx";
 import Login from "./pages/Login.jsx";
@@ -23,6 +23,17 @@ const roleRedirect = {
 };
 
 const DEFAULT_REDIRECT = "/login";
+
+function RouteChangeListener() {
+  const location = useLocation();
+
+  useEffect(() => {
+    NProgress.start();
+    NProgress.done();
+  }, [location.pathname]);
+
+  return null;
+}
 
 function AppRoutes() {
   const { isAuth, role } = useContext(AuthContext);
@@ -44,27 +55,27 @@ function AppRoutes() {
       <Route
         path="/login"
         element={
-          <PublicOnlyGate redirectTo={landingPath}>
+          <ProtectedRoute type="public" redirectTo={landingPath}>
             <PortalSelector />
-          </PublicOnlyGate>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/admin/login"
         element={
-          <PublicOnlyGate redirectTo={landingPath}>
+          <ProtectedRoute type="public" redirectTo={landingPath}>
             <Login expectedRole="admin" />
-          </PublicOnlyGate>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/faculty/login"
         element={
-          <PublicOnlyGate redirectTo={landingPath}>
+          <ProtectedRoute type="public" redirectTo={landingPath}>
             <Login expectedRole="faculty" />
-          </PublicOnlyGate>
+          </ProtectedRoute>
         }
       />
 
@@ -94,11 +105,11 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <RouteChangeListener />
       <AuthProvider>
-        <AuthBoundary>
-          <AppRoutes />
-        </AuthBoundary>
+        <AppRoutes />
       </AuthProvider>
+      <Toaster theme="system" position="bottom-right" richColors />
     </BrowserRouter>
   );
 }

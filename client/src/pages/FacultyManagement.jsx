@@ -29,37 +29,10 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { toast } from "sonner";
+import { Tooltip } from "../components/ui/tooltip";
 
 const PAGE_SIZE = 10;
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-const Toast = ({ toast, onClose }) => {
-  if (!toast) return null;
-  const isSuccess = toast.type === "success";
-  return (
-    <div
-      className={`fixed right-4 top-4 z-50 flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg transition-all ${
-        isSuccess
-          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-          : "border-destructive/30 bg-destructive/10 text-destructive"
-      }`}
-    >
-      {isSuccess ? (
-        <CheckCircle2 className="h-4 w-4 shrink-0" />
-      ) : (
-        <XCircle className="h-4 w-4 shrink-0" />
-      )}
-      <p className="text-sm font-medium">{toast.message}</p>
-      <button
-        onClick={onClose}
-        className="ml-2 opacity-60 hover:opacity-100"
-        aria-label="Dismiss"
-      >
-        ✕
-      </button>
-    </div>
-  );
-};
 
 // ─── Status Badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ isLocked }) =>
@@ -85,30 +58,32 @@ const formatDate = (iso) => {
 };
 
 // ─── Table Skeleton ───────────────────────────────────────────────────────────
+const shimmerClass = "animate-shimmer bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:400%_100%]";
+
 const TableSkeleton = ({ rows = 5 }) => (
   <div className="divide-y divide-border">
     {Array.from({ length: rows }).map((_, i) => (
       <div key={i} className="flex items-center gap-4 px-5 py-4">
         {/* Name */}
         <div className="flex-1">
-          <div className="h-3.5 w-32 rounded bg-muted animate-pulse" />
+          <div className={`h-3.5 w-32 rounded ${shimmerClass}`} />
         </div>
         {/* Email */}
         <div className="flex-[2]">
-          <div className="h-3 w-48 rounded bg-muted animate-pulse" />
+          <div className={`h-3 w-48 rounded ${shimmerClass}`} />
         </div>
         {/* Status */}
         <div className="w-20">
-          <div className="h-5 w-16 rounded-full bg-muted animate-pulse" />
+          <div className={`h-5 w-16 rounded-full ${shimmerClass}`} />
         </div>
         {/* Failed */}
         <div className="w-12 text-center">
-          <div className="mx-auto h-3.5 w-6 rounded bg-muted animate-pulse" />
+          <div className={`mx-auto h-3.5 w-6 rounded ${shimmerClass}`} />
         </div>
         {/* Actions */}
         <div className="flex gap-2">
-          <div className="h-7 w-16 rounded-lg bg-muted animate-pulse" />
-          <div className="h-7 w-14 rounded-lg bg-muted animate-pulse" />
+          <div className={`h-7 w-16 rounded-lg ${shimmerClass}`} />
+          <div className={`h-7 w-14 rounded-lg ${shimmerClass}`} />
         </div>
       </div>
     ))}
@@ -251,7 +226,6 @@ const FacultyManagement = () => {
   const [error, setError] = useState(null);
   const [unlocking, setUnlocking] = useState(null);
   const [deleting, setDeleting] = useState(null);
-  const [toast, setToast] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [page, setPage] = useState(1);
 
@@ -282,12 +256,18 @@ const FacultyManagement = () => {
     setPage(1); // reset to first page on search
   }, [search, faculty]);
 
-  // ── Auto-dismiss toast ────────────────────────────────────────────────────────
+  // ── Keyboard shortcut ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3500);
-    return () => clearTimeout(t);
-  }, [toast]);
+    const handleKeyDown = (e) => {
+      // Focus search on '/' key press, but not if user is already typing in an input
+      if (e.key === "/" && document.activeElement.tagName !== "INPUT") {
+        e.preventDefault();
+        document.getElementById("searchInput")?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // ── Unlock ────────────────────────────────────────────────────────────────────
   const handleUnlock = async (id) => {
@@ -297,9 +277,9 @@ const FacultyManagement = () => {
       setFaculty((prev) =>
         prev.map((f) => (f._id === id ? { ...f, isLocked: false, failedLogin: 0 } : f))
       );
-      setToast({ type: "success", message: res.data.message });
+      toast.success(res.data.message);
     } catch (err) {
-      setToast({ type: "error", message: err.response?.data?.message || "Failed to unlock." });
+      toast.error(err.response?.data?.message || "Failed to unlock.");
     } finally {
       setUnlocking(null);
     }
@@ -312,9 +292,9 @@ const FacultyManagement = () => {
     try {
       const res = await api.delete(`/admin/faculty/${deleteTarget._id}`);
       setFaculty((prev) => prev.filter((f) => f._id !== deleteTarget._id));
-      setToast({ type: "success", message: res.data.message });
+      toast.success(res.data.message);
     } catch (err) {
-      setToast({ type: "error", message: err.response?.data?.message || "Failed to delete." });
+      toast.error(err.response?.data?.message || "Failed to delete.");
     } finally {
       setDeleting(null);
       setDeleteTarget(null);
@@ -353,8 +333,6 @@ const FacultyManagement = () => {
 
   return (
     <AdminLayout pageTitle="Faculty">
-      <Toast toast={toast} onClose={() => setToast(null)} />
-
       {/* Delete Modal */}
       {deleteTarget && (
         <DeleteModal
@@ -463,7 +441,8 @@ const FacultyManagement = () => {
               </CardDescription>
             </div>
             <Input
-              placeholder="Search by name or email…"
+              id="searchInput"
+              placeholder="Search by name or email (Press '/')"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full sm:w-64"
@@ -507,10 +486,11 @@ const FacultyManagement = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {paginated.map((f) => (
+                    {paginated.map((f, index) => (
                       <tr
                         key={f._id}
-                        className={`transition-colors hover:bg-muted/20 ${f.isLocked ? "bg-rose-500/5" : ""}`}
+                        className={`animate-fade-in transition-colors hover:bg-muted/20 outline-none ${f.isLocked ? "bg-rose-500/5" : ""}`}
+                        style={{ animationDelay: `${index * 50}ms` }}
                       >
                         <td className="px-5 py-4 font-medium text-foreground">
                           {f.name || "—"}
@@ -534,31 +514,35 @@ const FacultyManagement = () => {
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end gap-2">
                             {f.isLocked && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1.5 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 dark:text-amber-400"
-                                onClick={() => handleUnlock(f._id)}
-                                disabled={unlocking === f._id}
-                              >
-                                {unlocking === f._id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <UnlockKeyhole className="h-3.5 w-3.5" />
-                                )}
-                                {unlocking === f._id ? "…" : "Unlock"}
-                              </Button>
+                              <Tooltip content="Unlock Account" side="top">
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-8 w-8 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 dark:text-amber-400"
+                                  onClick={() => handleUnlock(f._id)}
+                                  disabled={unlocking === f._id}
+                                  aria-label="Unlock Account"
+                                >
+                                  {unlocking === f._id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <UnlockKeyhole className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </Tooltip>
                             )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="gap-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => setDeleteTarget(f)}
-                              disabled={!!deleting}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
-                            </Button>
+                            <Tooltip content="Delete Faculty" side="top">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setDeleteTarget(f)}
+                                disabled={!!deleting}
+                                aria-label="Delete Faculty"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </Tooltip>
                           </div>
                         </td>
                       </tr>

@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import api from "../services/api.js";
 import AdminLayout from "../components/AdminLayout";
 import Breadcrumb from "../components/Breadcrumb";
@@ -81,41 +84,50 @@ const downloadTemplate = () => {
 // ══════════════════════════════════════════════════════════════════════════════
 // SINGLE REGISTER FORM
 // ══════════════════════════════════════════════════════════════════════════════
+const singleFormSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
+  email: z.string().trim().email("Must be a valid email address").toLowerCase(),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirm: z.string()
+}).refine(data => data.password === data.confirm, {
+  message: "Passwords do not match.",
+  path: ["confirm"]
+});
+
 const SingleForm = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors }
+  } = useForm({
+    resolver: zodResolver(singleFormSchema),
+    defaultValues: { name: "", email: "", password: "", confirm: "" }
+  });
 
-  const validate = () => {
-    if (!form.name.trim()) return "Name is required.";
-    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Invalid email address.";
-    if (form.password.length < 6) return "Password must be at least 6 characters.";
-    if (form.password !== form.confirm) return "Passwords do not match.";
-    return null;
-  };
+  const passwordValue = watch("password", "");
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setError(null);
     setSuccess(null);
-    const err = validate();
-    if (err) { setError(err); return; }
     setLoading(true);
     try {
-      const res = await api.post("/faculty/register", {
-        name: form.name.trim(),
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
+      const res = await api.post("/admin/register", {
+        name: data.name,
+        email: data.email,
+        password: data.password,
       });
       setSuccess(res.data.message || "Faculty registered successfully.");
-      setForm({ name: "", email: "", password: "", confirm: "" });
-      setTimeout(() => navigate("/admin/dashboard"), 2000);
+      reset();
+      setTimeout(() => navigate("/admin/dashboard"), 1500);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to register faculty.");
     } finally {
@@ -152,41 +164,45 @@ const SingleForm = () => {
             <CardDescription>All fields are required. Use the faculty member's institutional email.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="grid gap-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-5">
               <div className="grid gap-1.5">
                 <Label htmlFor="name" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <User className="h-3.5 w-3.5" /> Full Name
                 </Label>
-                <Input id="name" name="name" placeholder="Dr. Jane Smith" value={form.name} onChange={handleChange} disabled={loading} required />
+                <Input id="name" placeholder="Dr. Jane Smith" {...register("name")} disabled={loading} />
+                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="email" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Mail className="h-3.5 w-3.5" /> Email Address
                 </Label>
-                <Input id="email" name="email" type="email" placeholder="faculty@college.edu" value={form.email} onChange={handleChange} disabled={loading} required />
+                <Input id="email" type="email" placeholder="faculty@college.edu" {...register("email")} disabled={loading} />
+                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="password" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Lock className="h-3.5 w-3.5" /> Password
                 </Label>
                 <div className="relative">
-                  <Input id="password" name="password" type={showPass ? "text" : "password"} placeholder="Min. 6 characters" value={form.password} onChange={handleChange} disabled={loading} className="pr-10" required />
+                  <Input id="password" type={showPass ? "text" : "password"} placeholder="Min. 6 characters" {...register("password")} disabled={loading} className="pr-10" />
                   <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" tabIndex={-1}>
                     {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <PasswordStrength password={form.password} />
+                {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+                <PasswordStrength password={passwordValue} />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="confirm" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Lock className="h-3.5 w-3.5" /> Confirm Password
                 </Label>
                 <div className="relative">
-                  <Input id="confirm" name="confirm" type={showConfirm ? "text" : "password"} placeholder="Repeat password" value={form.confirm} onChange={handleChange} disabled={loading} className="pr-10" required />
+                  <Input id="confirm" type={showConfirm ? "text" : "password"} placeholder="Repeat password" {...register("confirm")} disabled={loading} className="pr-10" />
                   <button type="button" onClick={() => setShowConfirm((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" tabIndex={-1}>
                     {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {errors.confirm && <p className="text-xs text-destructive">{errors.confirm.message}</p>}
               </div>
 
               {error && (
@@ -204,8 +220,18 @@ const SingleForm = () => {
                 <Button type="button" variant="outline" className="flex-1" onClick={() => navigate("/admin/dashboard")} disabled={loading}>
                   Cancel
                 </Button>
-                <Button type="submit" className="flex-1 gap-2" disabled={loading || !!success}>
-                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Registering…</> : <><UserPlus className="h-4 w-4" /> Register Faculty</>}
+                <Button 
+                  type="submit" 
+                  className={`flex-1 gap-2 transition-all duration-300 ${success ? "bg-emerald-500 hover:bg-emerald-600 text-white" : ""}`} 
+                  disabled={loading || !!success}
+                >
+                  {loading ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Registering…</>
+                  ) : success ? (
+                    <><CheckCircle2 className="h-4 w-4" /> Success!</>
+                  ) : (
+                    <><UserPlus className="h-4 w-4" /> Register Faculty</>
+                  )}
                 </Button>
               </div>
             </form>
@@ -443,7 +469,27 @@ const BulkForm = () => {
                   </div>
                 ))}
               </div>
-              <Button variant="outline" size="sm" className="w-full gap-2" onClick={handleClear}>
+              
+              {/* Fake Live Log Stream of Processed Results */}
+              <div className="mt-4 max-h-48 overflow-y-auto rounded-md bg-muted/40 p-2 space-y-1 text-sm font-mono">
+                {result.summary?.created?.map((email, idx) => (
+                  <div key={`c-${idx}`} className="flex items-center gap-2 text-emerald-600 animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
+                    <CheckCircle2 className="h-3 w-3" /> {email} ... Success
+                  </div>
+                ))}
+                {result.summary?.skipped?.map((email, idx) => (
+                  <div key={`s-${idx}`} className="flex items-center gap-2 text-amber-600 animate-fade-in" style={{ animationDelay: `${(result.summary?.created?.length || 0) * 100 + idx * 100}ms` }}>
+                    <AlertTriangle className="h-3 w-3" /> {email} ... Skipped
+                  </div>
+                ))}
+                {result.summary?.failed?.map((item, idx) => (
+                  <div key={`f-${idx}`} className="flex items-center gap-2 text-rose-600 animate-fade-in" style={{ animationDelay: `${((result.summary?.created?.length || 0) + (result.summary?.skipped?.length || 0)) * 100 + idx * 100}ms` }}>
+                    <X className="h-3 w-3" /> {item.email} ... Failed
+                  </div>
+                ))}
+              </div>
+
+              <Button variant="outline" size="sm" className="w-full gap-2 mt-2" onClick={handleClear}>
                 <UploadCloud className="h-3.5 w-3.5" /> Import Another File
               </Button>
             </CardContent>

@@ -10,12 +10,11 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Read token and role from storage
-    const token = sessionStorage.getItem("token");
+    // 1. Read role from storage (cookie handles token)
     const storedRole = sessionStorage.getItem("role");
 
     // 2. Validate existence
-    if (token && storedRole) {
+    if (storedRole) {
       setIsAuth(true);
       setRole(storedRole);
       const storedLastLogin = sessionStorage.getItem("lastLogin");
@@ -26,10 +25,20 @@ export const AuthProvider = ({ children }) => {
 
     // 3. Finish loading
     setLoading(false);
+
+    // 4. Listen for API unauthorized events
+    const handleUnauthorized = () => {
+      logout();
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
   }, []);
 
-  const login = (token, newRole, newLastLogin, newName) => {
-    sessionStorage.setItem("token", token);
+  const login = (newRole, newLastLogin, newName) => {
     sessionStorage.setItem("role", newRole);
     if (newLastLogin) sessionStorage.setItem("lastLogin", newLastLogin);
     if (newName) sessionStorage.setItem("name", newName);
@@ -41,7 +50,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    sessionStorage.removeItem("token");
     sessionStorage.removeItem("role");
     sessionStorage.removeItem("lastLogin");
     sessionStorage.removeItem("name");

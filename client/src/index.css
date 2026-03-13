@@ -29,28 +29,28 @@
   }
 
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --card: 224 71% 6%;
-    --card-foreground: 213 31% 91%;
-    --popover: 224 71% 6%;
-    --popover-foreground: 213 31% 91%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
     --primary: 243 75% 65%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 223 47% 11%;
-    --secondary-foreground: 213 31% 91%;
-    --muted: 223 47% 11%;
-    --muted-foreground: 215 16% 57%;
-    --accent: 223 47% 14%;
-    --accent-foreground: 213 31% 91%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 63% 45%;
     --destructive-foreground: 210 40% 98%;
-    --border: 223 47% 14%;
-    --input: 223 47% 14%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
     --ring: 243 75% 65%;
-    --sidebar: 224 71% 5%;
-    --sidebar-foreground: 213 31% 85%;
-    --sidebar-border: 223 47% 14%;
+    --sidebar: 0 0% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 15%;
   }
 }
 
@@ -102,6 +102,26 @@
     from { height: var(--radix-accordion-content-height) }
     to { height: 0 }
   }
+
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+
+  --animate-fade-in: fade-in 0.4s ease-out forwards;
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    opacity: 0;
+  }
 }
 
 @layer base {
@@ -120,5 +140,13 @@
     font-family: "Inter", system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+  }
+
+  .lucide {
+    stroke-width: 1.5 !important;
   }
 }
