@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api.js";
-import ThemeToggle from "../components/ThemeToggle";
+import AdminLayout from "../components/AdminLayout";
+import Breadcrumb from "../components/Breadcrumb";
 import {
   Card,
   CardContent,
@@ -11,8 +12,6 @@ import {
 } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import {
-  School,
-  ArrowLeft,
   ScrollText,
   RefreshCw,
   ChevronLeft,
@@ -24,6 +23,7 @@ import {
   Loader2,
   AlertTriangle,
   Download,
+  AlertOctagon,
 } from "lucide-react";
 
 const StatusBadge = ({ status }) =>
@@ -120,50 +120,32 @@ const SystemLogs = () => {
     document.body.removeChild(link);
   };
 
-  // Summary counts from current full dataset for filter badges
-  const successCount = logs.filter((l) => l.status === "SUCCESS").length;
-  const failureCount = logs.filter((l) => l.status === "FAILURE").length;
-
   return (
-    <div className="min-h-screen bg-background pb-12">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    <AdminLayout pageTitle="Logs">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        {/* Breadcrumb layer */}
+        <Breadcrumb
+          items={[
+            { label: "Admin Portal", href: "/admin/dashboard" },
+            { label: "System Logs" },
+          ]}
+        />
+
+        {/* Page Title & Actions */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <School className="h-5 w-5" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10">
+              <ScrollText className="h-5 w-5 text-violet-500" />
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Admin Portal
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Login Audit Trail</h2>
+              <p className="text-sm text-muted-foreground">
+                All login attempts — successful and failed — for every account.
               </p>
-              <h1 className="text-sm font-bold leading-tight tracking-tight text-foreground sm:text-base">
-                System Logs
-              </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:inline">
-              ● Admin
-            </span>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        {/* Back + actions row */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-fit gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={() => navigate("/admin/dashboard")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -171,8 +153,8 @@ const SystemLogs = () => {
               onClick={handleExportCsv}
               disabled={loading || logs.length === 0}
             >
-              <Download className="h-3.5 w-3.5" />
-              Export
+              <Download className="h-3.5 w-3.5 text-emerald-500" />
+              Export CSV
             </Button>
             <Button
               variant="outline"
@@ -184,17 +166,6 @@ const SystemLogs = () => {
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-          </div>
-        </div>
-
-        {/* Page title */}
-        <div className="mb-6 flex items-center gap-2">
-          <ScrollText className="h-5 w-5 text-violet-500" />
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Login Audit Trail</h2>
-            <p className="text-sm text-muted-foreground">
-              All login attempts — successful and failed — for every account.
-            </p>
           </div>
         </div>
 
@@ -244,11 +215,25 @@ const SystemLogs = () => {
               </div>
             )}
 
-            {/* Empty */}
+            {/* Complete Empty State with Illustration */}
             {!loading && !error && logs.length === 0 && (
-              <div className="flex flex-col items-center justify-center gap-3 py-16">
-                <ScrollText className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No logs found.</p>
+              <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+                  <AlertOctagon className="h-7 w-7 text-muted-foreground/60" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">No logs found</p>
+                  <p className="mt-1 text-sm text-muted-foreground max-w-sm">
+                    {statusFilter
+                      ? `There are no events matching the status filter "${statusFilter}".`
+                      : "No login activity has been recorded yet in the system."}
+                  </p>
+                </div>
+                {statusFilter && (
+                  <Button variant="outline" size="sm" onClick={() => setStatusFilter("")} className="gap-1.5">
+                    Clear filter
+                  </Button>
+                )}
               </div>
             )}
 
@@ -341,7 +326,7 @@ const SystemLogs = () => {
           </div>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

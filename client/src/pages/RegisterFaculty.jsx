@@ -2,7 +2,8 @@ import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import api from "../services/api.js";
-import ThemeToggle from "../components/ThemeToggle";
+import AdminLayout from "../components/AdminLayout";
+import Breadcrumb from "../components/Breadcrumb";
 import PasswordStrength from "../components/PasswordStrength";
 import {
   Card,
@@ -15,8 +16,6 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import {
-  School,
-  ArrowLeft,
   UserPlus,
   Users,
   Mail,
@@ -480,33 +479,17 @@ const BulkForm = () => {
 // PAGE SHELL
 // ══════════════════════════════════════════════════════════════════════════════
 const RegisterFaculty = () => {
-  const navigate = useNavigate();
   const [tab, setTab] = useState("single");
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <School className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Admin Portal</p>
-              <h1 className="text-sm font-bold leading-tight tracking-tight text-foreground sm:text-base">Register Faculty</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:inline">● Admin</span>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
-
+    <AdminLayout pageTitle="Register Faculty">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <Button variant="ghost" size="sm" className="mb-6 -ml-2 gap-1.5 text-muted-foreground hover:text-foreground" onClick={() => navigate("/admin/dashboard")}>
-          <ArrowLeft className="h-4 w-4" /> Back to Dashboard
-        </Button>
+        <Breadcrumb
+          items={[
+            { label: "Admin Portal", href: "/admin/dashboard" },
+            { label: "Register Faculty" },
+          ]}
+        />
 
         {/* Tab switcher */}
         <div className="mb-8 flex items-center gap-2 rounded-xl border border-border bg-card p-1.5 w-fit shadow-sm">
@@ -516,7 +499,7 @@ const RegisterFaculty = () => {
 
         {tab === "single" ? <SingleForm /> : <BulkForm />}
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

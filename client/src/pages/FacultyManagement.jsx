@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api.js";
-import ThemeToggle from "../components/ThemeToggle";
+import AdminLayout from "../components/AdminLayout";
+import Breadcrumb from "../components/Breadcrumb";
 import {
   Card,
   CardHeader,
@@ -12,9 +13,6 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
-  School,
-  ArrowLeft,
-  RefreshCw,
   Users,
   ShieldCheck,
   ShieldAlert,
@@ -25,9 +23,16 @@ import {
   XCircle,
   AlertTriangle,
   Download,
+  RefreshCw,
+  SearchX,
+  UserPlus,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
-// ─── Toast ───────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 10;
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
 const Toast = ({ toast, onClose }) => {
   if (!toast) return null;
   const isSuccess = toast.type === "success";
@@ -79,6 +84,71 @@ const formatDate = (iso) => {
   });
 };
 
+// ─── Table Skeleton ───────────────────────────────────────────────────────────
+const TableSkeleton = ({ rows = 5 }) => (
+  <div className="divide-y divide-border">
+    {Array.from({ length: rows }).map((_, i) => (
+      <div key={i} className="flex items-center gap-4 px-5 py-4">
+        {/* Name */}
+        <div className="flex-1">
+          <div className="h-3.5 w-32 rounded bg-muted animate-pulse" />
+        </div>
+        {/* Email */}
+        <div className="flex-[2]">
+          <div className="h-3 w-48 rounded bg-muted animate-pulse" />
+        </div>
+        {/* Status */}
+        <div className="w-20">
+          <div className="h-5 w-16 rounded-full bg-muted animate-pulse" />
+        </div>
+        {/* Failed */}
+        <div className="w-12 text-center">
+          <div className="mx-auto h-3.5 w-6 rounded bg-muted animate-pulse" />
+        </div>
+        {/* Actions */}
+        <div className="flex gap-2">
+          <div className="h-7 w-16 rounded-lg bg-muted animate-pulse" />
+          <div className="h-7 w-14 rounded-lg bg-muted animate-pulse" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+const EmptyState = ({ isSearch, search, onClear, onRegister }) => (
+  <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+      {isSearch ? (
+        <SearchX className="h-7 w-7 text-muted-foreground/60" />
+      ) : (
+        <Users className="h-7 w-7 text-muted-foreground/60" />
+      )}
+    </div>
+    <div>
+      <p className="font-semibold text-foreground">
+        {isSearch ? "No results found" : "No faculty yet"}
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {isSearch
+          ? `No faculty match "${search}". Try a different name or email.`
+          : "Get started by registering your first faculty member."}
+      </p>
+    </div>
+    {isSearch ? (
+      <Button variant="outline" size="sm" onClick={onClear} className="gap-1.5">
+        <XCircle className="h-3.5 w-3.5" />
+        Clear search
+      </Button>
+    ) : (
+      <Button size="sm" onClick={onRegister} className="gap-1.5">
+        <UserPlus className="h-3.5 w-3.5" />
+        Register Faculty
+      </Button>
+    )}
+  </div>
+);
+
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
 const DeleteModal = ({ faculty, onConfirm, onCancel, loading }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -119,6 +189,58 @@ const DeleteModal = ({ faculty, onConfirm, onCancel, loading }) => (
   </div>
 );
 
+// ─── Pagination Bar ───────────────────────────────────────────────────────────
+const PaginationBar = ({ page, totalPages, onChange }) => {
+  if (totalPages <= 1) return null;
+
+  // Build page numbers to show (max 5)
+  const pages = [];
+  const start = Math.max(1, page - 2);
+  const end = Math.min(totalPages, start + 4);
+  for (let i = start; i <= end; i++) pages.push(i);
+
+  return (
+    <div className="flex items-center justify-between border-t border-border px-5 py-3">
+      <p className="text-xs text-muted-foreground">
+        Page {page} of {totalPages}
+      </p>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0"
+          onClick={() => onChange(page - 1)}
+          disabled={page <= 1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        {pages.map((p) => (
+          <button
+            key={p}
+            onClick={() => onChange(p)}
+            className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-medium transition-colors ${
+              p === page
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0"
+          onClick={() => onChange(page + 1)}
+          disabled={page >= totalPages}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const FacultyManagement = () => {
   const navigate = useNavigate();
@@ -130,9 +252,10 @@ const FacultyManagement = () => {
   const [unlocking, setUnlocking] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [toast, setToast] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null); // faculty to delete (triggers modal)
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [page, setPage] = useState(1);
 
-  // ── Fetch ───────────────────────────────────────────────────────────────────
+  // ── Fetch ────────────────────────────────────────────────────────────────────
   const fetchFaculty = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -149,24 +272,24 @@ const FacultyManagement = () => {
 
   useEffect(() => { fetchFaculty(); }, [fetchFaculty]);
 
-  // ── Search filter ────────────────────────────────────────────────────────────
+  // ── Search filter ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const q = search.toLowerCase();
-    setFiltered(
-      faculty.filter(
-        (f) => f.name?.toLowerCase().includes(q) || f.email?.toLowerCase().includes(q)
-      )
+    const result = faculty.filter(
+      (f) => f.name?.toLowerCase().includes(q) || f.email?.toLowerCase().includes(q)
     );
+    setFiltered(result);
+    setPage(1); // reset to first page on search
   }, [search, faculty]);
 
-  // ── Auto-dismiss toast ───────────────────────────────────────────────────────
+  // ── Auto-dismiss toast ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3500);
     return () => clearTimeout(t);
   }, [toast]);
 
-  // ── Unlock ───────────────────────────────────────────────────────────────────
+  // ── Unlock ────────────────────────────────────────────────────────────────────
   const handleUnlock = async (id) => {
     setUnlocking(id);
     try {
@@ -182,7 +305,7 @@ const FacultyManagement = () => {
     }
   };
 
-  // ── Delete ────────────────────────────────────────────────────────────────────
+  // ── Delete ─────────────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(deleteTarget._id);
@@ -198,11 +321,15 @@ const FacultyManagement = () => {
     }
   };
 
-  // ── Stats ─────────────────────────────────────────────────────────────────────
+  // ── Stats ──────────────────────────────────────────────────────────────────────
   const totalLocked = faculty.filter((f) => f.isLocked).length;
   const totalActive = faculty.filter((f) => !f.isLocked).length;
 
-  // ── Export CSV ─────────────────────────────────────────────────────────────
+  // ── Pagination ─────────────────────────────────────────────────────────────────
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // ── Export CSV ─────────────────────────────────────────────────────────────────
   const handleExportCsv = () => {
     if (!faculty.length) return;
     const headers = ["Name", "Email", "Status", "Failed Logins", "Joined"];
@@ -225,7 +352,7 @@ const FacultyManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-12">
+    <AdminLayout pageTitle="Faculty">
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* Delete Modal */}
@@ -238,44 +365,24 @@ const FacultyManagement = () => {
         />
       )}
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <School className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Admin Portal
-              </p>
-              <h1 className="text-sm font-bold leading-tight tracking-tight text-foreground sm:text-base">
-                Faculty Management
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:inline">
-              ● Admin
-            </span>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
-
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        {/* Back + Refresh */}
-        <div className="mb-6 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={() => navigate("/admin/dashboard")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
-          <div className="flex items-center gap-2">
+        {/* Breadcrumb */}
+        <Breadcrumb
+          items={[
+            { label: "Admin Portal", href: "/admin/dashboard" },
+            { label: "Faculty Management" },
+          ]}
+        />
+
+        {/* Page header + actions */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">Faculty Management</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage all faculty accounts, unlock locked accounts, and monitor login attempts.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -299,7 +406,7 @@ const FacultyManagement = () => {
           </div>
         </div>
 
-        {/* ── Summary Stats ─────────────────────────────────────────────────── */}
+        {/* Summary Stats */}
         <div className="mb-6 grid gap-4 sm:grid-cols-3">
           <Card className="border-border bg-card">
             <CardContent className="pt-5">
@@ -346,7 +453,7 @@ const FacultyManagement = () => {
           </Card>
         </div>
 
-        {/* ── Faculty Table Card ─────────────────────────────────────────────── */}
+        {/* Faculty Table Card */}
         <Card className="border-border">
           <CardHeader className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -364,13 +471,10 @@ const FacultyManagement = () => {
           </CardHeader>
 
           <CardContent className="p-0">
-            {loading && (
-              <div className="flex items-center justify-center gap-2 py-14 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading faculty…
-              </div>
-            )}
+            {/* Skeleton loader */}
+            {loading && <TableSkeleton rows={5} />}
 
+            {/* Error */}
             {!loading && error && (
               <div className="mx-6 my-6 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -378,12 +482,17 @@ const FacultyManagement = () => {
               </div>
             )}
 
+            {/* Empty state */}
             {!loading && !error && filtered.length === 0 && (
-              <div className="py-14 text-center text-sm text-muted-foreground">
-                {search ? "No faculty match your search." : "No faculty found."}
-              </div>
+              <EmptyState
+                isSearch={!!search}
+                search={search}
+                onClear={() => setSearch("")}
+                onRegister={() => navigate("/admin/register-faculty")}
+              />
             )}
 
+            {/* Table */}
             {!loading && !error && filtered.length > 0 && (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -398,12 +507,10 @@ const FacultyManagement = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {filtered.map((f) => (
+                    {paginated.map((f) => (
                       <tr
                         key={f._id}
-                        className={`transition-colors hover:bg-muted/20 ${
-                          f.isLocked ? "bg-rose-500/5" : ""
-                        }`}
+                        className={`transition-colors hover:bg-muted/20 ${f.isLocked ? "bg-rose-500/5" : ""}`}
                       >
                         <td className="px-5 py-4 font-medium text-foreground">
                           {f.name || "—"}
@@ -458,12 +565,19 @@ const FacultyManagement = () => {
                     ))}
                   </tbody>
                 </table>
+
+                {/* Pagination */}
+                <PaginationBar
+                  page={page}
+                  totalPages={totalPages}
+                  onChange={setPage}
+                />
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import LogoutButton from "../components/LogoutButton";
@@ -87,10 +87,30 @@ const formatLastLogin = (isoString) => {
   }
 };
 
+// ── Skeleton placeholder ──────────────────────────────────────────────────────
+const StatSkeleton = () => (
+  <Card className="border-border bg-card">
+    <CardContent className="flex items-center gap-4 pt-6">
+      <div className="h-10 w-10 shrink-0 rounded-lg bg-muted animate-pulse" />
+      <div className="min-w-0 flex-1">
+        <div className="h-3 w-20 rounded bg-muted animate-pulse" />
+        <div className="mt-2 h-7 w-12 rounded bg-muted animate-pulse" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
 const FacultyDashboard = () => {
   const { lastLogin, name } = useContext(AuthContext);
+  const [loadingStats, setLoadingStats] = useState(true);
   const greeting = getGreeting();
   const lastLoginFormatted = formatLastLogin(lastLogin);
+
+  // Simulate a quick network fetch for stats so we can demonstrate the skeleton
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingStats(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -143,41 +163,51 @@ const FacultyDashboard = () => {
 
         {/* ── Quick Stats ── */}
         <div className="mb-8 grid gap-4 sm:grid-cols-3">
-          <Card className="border-border bg-card">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
-                <CalendarDays className="h-5 w-5 text-indigo-500" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Today's Classes</p>
-                <p className="text-2xl font-bold text-foreground">0</p>
-              </div>
-            </CardContent>
-          </Card>
+          {loadingStats ? (
+            <>
+              <StatSkeleton />
+              <StatSkeleton />
+              <StatSkeleton />
+            </>
+          ) : (
+            <>
+              <Card className="border-border bg-card">
+                <CardContent className="flex items-center gap-4 pt-6">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
+                    <CalendarDays className="h-5 w-5 text-indigo-500" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Today's Classes</p>
+                    <p className="text-2xl font-bold text-foreground">0</p>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="border-border bg-card">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10">
-                <Users className="h-5 w-5 text-sky-500" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Total Students</p>
-                <p className="text-2xl font-bold text-foreground">—</p>
-              </div>
-            </CardContent>
-          </Card>
+              <Card className="border-border bg-card">
+                <CardContent className="flex items-center gap-4 pt-6">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10">
+                    <Users className="h-5 w-5 text-sky-500" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Total Students</p>
+                    <p className="text-2xl font-bold text-foreground">—</p>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="border-border bg-card">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-                <FileBarChart2 className="h-5 w-5 text-emerald-500" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Pending Reports</p>
-                <p className="text-2xl font-bold text-foreground">—</p>
-              </div>
-            </CardContent>
-          </Card>
+              <Card className="border-border bg-card">
+                <CardContent className="flex items-center gap-4 pt-6">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
+                    <FileBarChart2 className="h-5 w-5 text-emerald-500" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Pending Reports</p>
+                    <p className="text-2xl font-bold text-foreground">—</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
         {/* ── Quick Actions ── */}

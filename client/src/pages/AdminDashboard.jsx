@@ -2,14 +2,12 @@ import { useEffect, useState, useContext, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../services/api.js";
-import LogoutButton from "../components/LogoutButton";
-import ThemeToggle from "../components/ThemeToggle";
+import AdminLayout from "../components/AdminLayout";
 import {
   Card,
   CardContent,
 } from "../components/ui/card";
 import {
-  School,
   Users,
   Activity,
   Lock,
@@ -139,11 +137,18 @@ const PieTooltip = ({ active, payload }) => {
   );
 };
 
-const PIE_COLORS = ["#6366f1", "#f43f5e"]; // indigo for active, rose for locked
+const PIE_COLORS = ["#6366f1", "#f43f5e"];
+
+const getTimeGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { role, name } = useContext(AuthContext);
+  const { name } = useContext(AuthContext);
   const [stats, setStats] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [lockedCount, setLockedCount] = useState(null);
@@ -171,52 +176,20 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchAll();
-
-    // Auto-refresh dashboard stats every 30 seconds silently
-    const intervalId = setInterval(() => {
-      fetchAll(false);
-    }, 30000);
-
+    const intervalId = setInterval(() => fetchAll(false), 30000);
     return () => clearInterval(intervalId);
   }, [fetchAll]);
 
   const statsLoading = stats === null && !error;
   const chartsLoading = chartData === null && !error;
 
-  // Add fill colour to pie data so tooltip can reference it
   const pieData = chartData?.accountStatus?.map((d, i) => ({
     ...d,
     fill: PIE_COLORS[i % PIE_COLORS.length],
   }));
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top Nav */}
-      <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <School className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Admin Portal
-              </p>
-              <h1 className="text-sm font-bold leading-tight tracking-tight text-foreground sm:text-base">
-                Dashboard
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:inline">
-              ● Admin
-            </span>
-            <ThemeToggle />
-            <LogoutButton />
-          </div>
-        </div>
-      </header>
-
+    <AdminLayout pageTitle="Dashboard">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* Error Alert */}
         {error && (
@@ -233,7 +206,7 @@ const AdminDashboard = () => {
           <div className="flex items-center gap-2">
             <LayoutDashboard className="h-5 w-5 text-primary" />
             <h2 className="text-2xl font-bold tracking-tight text-foreground">
-              Welcome back{name ? `, ${name}` : ""}
+              {getTimeGreeting()}{name ? `, ${name}` : ""} 👋
             </h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -288,7 +261,7 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {/* ── Analytics Charts ─────────────────────────────────────────────── */}
+        {/* Analytics Charts */}
         <div className="mb-4 flex items-center gap-2">
           <BarChart2 className="h-4 w-4 text-primary" />
           <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -296,8 +269,7 @@ const AdminDashboard = () => {
           </h3>
         </div>
         <div className="mb-8 grid gap-4 lg:grid-cols-3">
-
-          {/* Bar Chart — Login Activity (Last 7 Days) */}
+          {/* Bar Chart */}
           <Card className="border-border bg-card lg:col-span-2">
             <CardContent className="pt-5">
               <p className="mb-1 text-sm font-semibold text-foreground">Login Activity</p>
@@ -314,24 +286,10 @@ const AdminDashboard = () => {
                       barGap={3}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis
-                        dataKey="day"
-                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
+                      <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                       <Tooltip content={<BarTooltip />} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
-                      <Legend
-                        wrapperStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}
-                        iconType="circle"
-                        iconSize={8}
-                      />
+                      <Legend wrapperStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }} iconType="circle" iconSize={8} />
                       <Bar dataKey="success" name="Success" fill="#22c55e" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="failure" name="Failure" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                     </BarChart>
@@ -341,7 +299,7 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Pie Chart — Account Status */}
+          {/* Pie Chart */}
           <Card className="border-border bg-card">
             <CardContent className="pt-5">
               <p className="mb-1 text-sm font-semibold text-foreground">Account Status</p>
@@ -354,26 +312,13 @@ const AdminDashboard = () => {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie
-                        data={pieData ?? []}
-                        cx="50%"
-                        cy="45%"
-                        innerRadius={55}
-                        outerRadius={80}
-                        paddingAngle={3}
-                        dataKey="value"
-                        strokeWidth={0}
-                      >
+                      <Pie data={pieData ?? []} cx="50%" cy="45%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value" strokeWidth={0}>
                         {(pieData ?? []).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Pie>
                       <Tooltip content={<PieTooltip />} />
-                      <Legend
-                        wrapperStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}
-                        iconType="circle"
-                        iconSize={8}
-                      />
+                      <Legend wrapperStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }} iconType="circle" iconSize={8} />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
@@ -382,7 +327,7 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Quick Actions header with Refresh */}
+        {/* Quick Actions */}
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Quick Actions
@@ -433,9 +378,7 @@ const AdminDashboard = () => {
               <ShieldCheck className="h-4 w-4 text-primary" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-foreground">
-                Layered Security Active
-              </p>
+              <p className="text-sm font-semibold text-foreground">Layered Security Active</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Every action on this dashboard is verified server-side via JWT + role middleware.
                 Frontend guards are UX only — the backend is the final authority.
@@ -448,7 +391,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 
