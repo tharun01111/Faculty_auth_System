@@ -10,6 +10,15 @@ const facultySchema = new mongoose.Schema({
     unique: true,
     required: true,
   },
+  employeeId: {
+    type: String,
+    unique: true,
+    required: true,
+  },
+  department: {
+    type: String,
+    required: true,
+  },
   password: {
     type: String,
     required: true,

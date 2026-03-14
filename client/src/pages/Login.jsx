@@ -6,6 +6,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Button } from "../components/ui/button";
 import ThemeToggle from "../components/ThemeToggle";
+import { toast } from "sonner";
 import {
   ShieldCheck,
   GraduationCap,
@@ -67,16 +68,20 @@ const Login = ({ expectedRole }) => {
         role === expectedRole || (expectedRole === "faculty" && role === "user");
 
       if (!isAuthorized) {
-        setError("You are not authorized for this portal.");
+        const msg = "You are not authorized for this portal.";
+        setError(msg);
+        toast.error(msg);
         triggerShake();
         return;
       }
 
       login(role, lastLogin, name);
+      toast.success(`Welcome back, ${name}!`);
       navigate(`/${expectedRole}/dashboard`);
     } catch (err) {
       const message = err.response?.data?.message || err.message || "Login failed";
       setError(message);
+      toast.error(message);
       triggerShake();
     } finally {
       setLoading(false);

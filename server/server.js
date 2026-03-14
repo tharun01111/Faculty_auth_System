@@ -60,6 +60,8 @@ const loginLimiter = rateLimit({
 // Database Connection
 connectDb().then(() => {
   pruneOldLogs();
+  // Run pruning every 24 hours
+  setInterval(pruneOldLogs, 24 * 60 * 60 * 1000);
 });
 
 // ── Routes ────────────────────────────────────────────────────────────────────

@@ -128,15 +128,17 @@ export const logout = (req, res) => {
 
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, employeeId, department, password } = req.body;
 
     // Route is protected by 'protect' + 'adminOnly' middleware
     const id = req.user ? req.user._id : null;
 
-    const existing = await User.findOne({ email });
+    const existing = await User.findOne({ 
+      $or: [{ email }, { employeeId }] 
+    });
     if (existing) {
       res.status(400);
-      throw new Error("User already exists");
+      throw new Error("Faculty with this email or Employee ID already exists");
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -144,6 +146,8 @@ export const register = async (req, res, next) => {
     const newFaculty = await User.create({
       name,
       email,
+      employeeId,
+      department,
       password: hash,
       createdBy: id,
     });
@@ -292,15 +296,19 @@ export const bulkRegister = async (req, res, next) => {
 
     // Process rows in parallel using Promise.allSettled for much better performance
     const promises = rows.map(async (row) => {
-      const existing = await User.findOne({ email: row.email });
+      const existing = await User.findOne({ 
+        $or: [{ email: row.email }, { employeeId: row.employeeId }] 
+      });
       if (existing) {
-        return { status: "skipped", email: row.email, reason: "Already exists" };
+        return { status: "skipped", email: row.email, reason: "Email or Employee ID already exists" };
       }
 
       const hash = await bcrypt.hash(row.password, 10);
       const newFaculty = await User.create({
         name: row.name,
         email: row.email,
+        employeeId: row.employeeId,
+        department: row.department,
         password: hash,
         createdBy: adminId,
       });

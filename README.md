@@ -10,6 +10,7 @@ A secure, modern, full-stack web application for managing Faculty and Admin auth
 - **Multi-Role System** — Separate secure portals for Faculty and Admins
 - **JWT Sessions** — Signed JSON Web Tokens, stored in session storage
 - **Persistent Login** — Session restored automatically on page reload (incl. `lastLogin` timestamp)
+- **Forgot Password Flow** — Secure password reset via email using signed short-lived tokens
 - **Route Protection** — `ProtectedRoute` + `PublicOnlyGate` components prevent unauthorized access
 - **Smart Redirects** — Login pages redirect already-authenticated users to their dashboard
 
@@ -23,12 +24,16 @@ A secure, modern, full-stack web application for managing Faculty and Admin auth
 - **Login Audit Trail** — Every attempt (Success/Failure) logged with email, IP, User Agent, and timestamp. Includes automated 30-day purge scripts
 - **Last Login Tracking** — `lastLogin` timestamp stored per faculty account and shown on the dashboard
 - **Role Sealed in JWT** — Role is determined by the backend and embedded in the signed token — never trusted from the frontend
+- **Zod Validation** — Strict schema validation for all incoming requests (auth, registration, settings)
+- **Helmet.js** — Security-oriented HTTP headers (XSS protection, CSP, etc.)
 
 ### Admin Portal
 - **Real-time Stats** — Total Faculty, Active Accounts, Locked Accounts, Logins in last 24h (live from DB)
-- **Analytics Charts** — Interactive Bar Chart (7-day login activity: success vs failures) and Donut Chart (account status breakdown) powered by Recharts
+- **Global Search** — Spotlight-style command palette (`Ctrl/⌘ + K`) to find faculty by name, ID, or email instantly
+- **Departmental Filtering** — Tabbed interface to view and manage faculty grouped by their respective departments
+- **Analytics Charts** — Interactive Bar Chart (7-day login activity) and Donut Chart (account status) powered by Recharts
 - **Faculty Management** — View all faculty, unlock locked accounts, delete accounts
-- **Register Faculty** — Create new faculty accounts directly from the admin panel
+- **Register Faculty** — Single and Bulk faculty registration with `Employee ID` and `Department` fields
 - **System Logs** — Paginated, filterable login audit log (Success / Failure)
 - **Email Notifications** — Automated emails on account creation, lock, and unlock events (via Resend API)
 
@@ -36,9 +41,10 @@ A secure, modern, full-stack web application for managing Faculty and Admin auth
 - **Dark / Light Mode & Glassmorphism** — OLED-friendly dark mode base (`#121212`) and frosted glass surfaces (`backdrop-blur-md`)
 - **Advanced Loading States** — Animated CSS shimmer skeletons, cascading staggered row loading, and `nprogress` route transition bars
 - **Haptic Feedback & Toasts** — Sliding `sonner` toast notifications and context-aware 401/403 event handling for seamless SPA experience
-- **Micro-interactions** — Buttons feature `active:scale-[0.98]` physical press states, contextual 1.5-second success feedback loops, and card hover lift effects
-- **Simulated "Live Log"** — Bulk import results are displayed via an animated, sequentially-staggered stream of successes and failures
-- **A11y & Keyboard Shortcuts** — Press `/` to focus search, icon-only buttons wrapped in native Tooltips, segmented visual password strength indicator
+- **Micro-interactions** — Buttons feature `active:scale-[0.98]` physical press states, contextual success loops, and card hover lift effects
+- **Simulated "Live Log"** — Bulk import results are displayed via an animated, sequentially-staggered stream
+- **Spotlight Search** — Advanced command palette with keyboard navigation, blurred backdrops, and animated transitions
+- **A11y & Keyboard Shortcuts** — Press `/` to focus search, `Ctrl+K` for global search, icon Tooltips, and password strength indicators
 - **Animated Analytics** — Custom-styled Recharts components with explicit entrance animations (`isAnimationActive`), responsive containers, and theme-aware tooltips
 - **Animated Portal Selector** — Soft gradient orb background and "All systems operational" status badge
 - **Time-of-Day Greeting** — Faculty dashboard says "Good morning / afternoon / evening"
@@ -94,19 +100,20 @@ Every error in the system is traced to its exact source:
 ## 🛠️ Technology Stack
 
 ### Frontend (`/client`)
-- **Framework**: React.js (Vite)
+- **Framework**: React.js 19 (Vite)
 - **Routing**: React Router v7
-- **State Management**: React Context API (`AuthContext` with `lastLogin`)
-- **Styling**: Tailwind CSS v4, shadcn/ui, Lucide React
-- **Charts**: Recharts (Bar Chart + Donut Pie Chart with custom tooltips and skeletons)
+- **State Management**: React Context API
+- **Styling**: Tailwind CSS v4, shadcn/ui, Lucide React, Framer Motion (for smooth transitions)
+- **Charts**: Recharts
+- **Security**: Zod (Client-side validation), Lucide icons
 - **HTTP Client**: Axios (with interceptors for token injection + 401/403 handling)
 
 ### Backend (`/server`)
-- **Runtime**: Node.js v18+
+- **Runtime**: Node.js v20+
 - **Framework**: Express.js
 - **Database**: MongoDB (Mongoose ODM)
-- **Security**: jsonwebtoken, bcryptjs, express-rate-limit, cors, dotenv
-- **Email**: Resend REST API (account creation, lock, unlock notifications)
+- **Security**: Helmet, Zod (Server-side validation), jsonwebtoken, bcryptjs, express-rate-limit
+- **Email**: Resend REST API (account creation, lock, unlock, password reset)
 
 ---
 
@@ -116,12 +123,14 @@ Every error in the system is traced to its exact source:
 Mini_Project/
 ├── client/                   # Frontend
 │   ├── src/
-│   │   ├── components/       # UI Components (Button, Card, Input, ThemeToggle…)
+│   │   ├── components/       # UI Components (Button, Card, GlobalSearch, ThemeToggle…)
 │   │   ├── context/          # AuthProvider — isAuth, role, lastLogin
 │   │   ├── pages/
-│   │   │   ├── AdminDashboard.jsx      # Admin home — live stats + Recharts analytics + refresh
-│   │   │   ├── FacultyManagement.jsx   # List, unlock, delete faculty
-│   │   │   ├── RegisterFaculty.jsx     # Create new faculty account
+│   │   │   ├── AdminDashboard.jsx      # Admin home — live stats + Recharts analytics
+│   │   │   ├── FacultyManagement.jsx   # Tabbed directory, unlock, delete faculty
+│   │   │   ├── RegisterFaculty.jsx     # Single & Bulk registration
+│   │   │   ├── ForgotPassword.jsx      # Password reset request flow
+│   │   │   ├── ResetPassword.jsx       # Password update via secure link
 │   │   │   ├── SystemLogs.jsx          # Login audit trail
 │   │   │   ├── FacultyDashboard.jsx    # Faculty home — greeting + last login
 │   │   │   ├── Login.jsx               # Role-aware login form with password toggle
@@ -208,13 +217,16 @@ App runs at `http://localhost:5173`.
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | `POST` | `/faculty/login` | Public | Authenticate faculty (rate-limited) |
-| `POST` | `/faculty/register` | Admin JWT | Create new faculty account |
+| `POST` | `/faculty/register` | Admin JWT | Create new faculty account (with ID & Dept) |
+| `POST` | `/faculty/forgot-password` | Public | Request password reset email |
+| `POST` | `/faculty/reset-password` | Token | Update password using reset token |
 
 ### Admin (`/admin`)
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | `POST` | `/admin/login` | Public | Authenticate admin (rate-limited) |
 | `POST` | `/admin/register` | Public | Create admin account |
+| `POST` | `/admin/faculty/bulk-register` | Admin JWT | Bulk import faculty from Excel template |
 | `GET` | `/admin/stats` | Admin JWT | Live stats (faculty count, locked, logins 24h) |
 | `GET` | `/admin/charts` | Admin JWT | Aggregated chart data — 7-day login activity + account status breakdown |
 | `GET` | `/admin/faculty` | Admin JWT | List all faculty accounts |

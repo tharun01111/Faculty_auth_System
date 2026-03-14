@@ -13,21 +13,24 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
-  Users,
-  ShieldCheck,
-  ShieldAlert,
-  UnlockKeyhole,
-  Trash2,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Download,
-  RefreshCw,
-  SearchX,
   UserPlus,
   ChevronLeft,
   ChevronRight,
+  Building2,
+  Hash,
+  LayoutGrid,
+  Download,
+  RefreshCw,
+  SearchX,
+  XCircle,
+  Trash2,
+  Loader2,
+  Search,
+  Users,
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
+  UnlockKeyhole,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip } from "../components/ui/tooltip";
@@ -91,23 +94,23 @@ const TableSkeleton = ({ rows = 5 }) => (
 );
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
-const EmptyState = ({ isSearch, search, onClear, onRegister }) => (
+const EmptyState = ({ isSearch, search, onClear, onRegister, department }) => (
   <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
       {isSearch ? (
         <SearchX className="h-7 w-7 text-muted-foreground/60" />
       ) : (
-        <Users className="h-7 w-7 text-muted-foreground/60" />
+        <Building2 className="h-7 w-7 text-muted-foreground/60" />
       )}
     </div>
     <div>
       <p className="font-semibold text-foreground">
-        {isSearch ? "No results found" : "No faculty yet"}
+        {isSearch ? "No results found" : `No faculty in ${department}`}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
         {isSearch
-          ? `No faculty match "${search}". Try a different name or email.`
-          : "Get started by registering your first faculty member."}
+          ? `No faculty match "${search}". Try a different name, email, or ID.`
+          : `There are no faculty registered under the ${department} department.`}
       </p>
     </div>
     {isSearch ? (
@@ -118,9 +121,40 @@ const EmptyState = ({ isSearch, search, onClear, onRegister }) => (
     ) : (
       <Button size="sm" onClick={onRegister} className="gap-1.5">
         <UserPlus className="h-3.5 w-3.5" />
-        Register Faculty
+        Add Faculty
       </Button>
     )}
+  </div>
+);
+
+// ─── Department Tabs ────────────────────────────────────────────────────────
+const DepartmentTabs = ({ departments, activeTab, onTabChange }) => (
+  <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+    <button
+      onClick={() => onTabChange("All")}
+      className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+        activeTab === "All"
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      }`}
+    >
+      <LayoutGrid className="h-4 w-4" />
+      All Departments
+    </button>
+    {departments.map((dept) => (
+      <button
+        key={dept}
+        onClick={() => onTabChange(dept)}
+        className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+          activeTab === dept
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        }`}
+      >
+        <Building2 className="h-4 w-4" />
+        {dept}
+      </button>
+    ))}
   </div>
 );
 
@@ -228,6 +262,10 @@ const FacultyManagement = () => {
   const [deleting, setDeleting] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("All");
+
+  // ── Departments List ────────────────────────────────────────────────────────
+  const departments = [...new Set(faculty.map(f => f.department).filter(Boolean))].sort();
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
   const fetchFaculty = useCallback(async () => {
@@ -249,12 +287,27 @@ const FacultyManagement = () => {
   // ── Search filter ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const q = search.toLowerCase();
-    const result = faculty.filter(
-      (f) => f.name?.toLowerCase().includes(q) || f.email?.toLowerCase().includes(q)
-    );
+    let result = faculty;
+    
+    // Apply Tab Filter
+    if (activeTab !== "All") {
+      result = result.filter(f => f.department === activeTab);
+    }
+
+    // Apply Search Filter
+    if (q) {
+      result = result.filter(
+        (f) => 
+          f.name?.toLowerCase().includes(q) || 
+          f.email?.toLowerCase().includes(q) ||
+          f.employeeId?.toLowerCase().includes(q) ||
+          f.department?.toLowerCase().includes(q)
+      );
+    }
+    
     setFiltered(result);
-    setPage(1); // reset to first page on search
-  }, [search, faculty]);
+    setPage(1); // reset to first page on filter change
+  }, [search, faculty, activeTab]);
 
   // ── Keyboard shortcut ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -312,10 +365,12 @@ const FacultyManagement = () => {
   // ── Export CSV ─────────────────────────────────────────────────────────────────
   const handleExportCsv = () => {
     if (!faculty.length) return;
-    const headers = ["Name", "Email", "Status", "Failed Logins", "Joined"];
+    const headers = ["Name", "Email", "Employee ID", "Department", "Status", "Failed Logins", "Joined"];
     const rows = faculty.map((f) => [
       f.name || "",
       f.email,
+      f.employeeId || "",
+      f.department || "",
       f.isLocked ? "Locked" : "Active",
       f.failedLogin ?? 0,
       formatDate(f.createdAt),
@@ -435,18 +490,28 @@ const FacultyManagement = () => {
         <Card className="border-border">
           <CardHeader className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="text-base">All Faculty</CardTitle>
+              <CardTitle className="text-base">Faculty Directory</CardTitle>
               <CardDescription>
-                Accounts lock automatically after 3 failed login attempts.
+                Manage faculty accounts, departments, and security status.
               </CardDescription>
             </div>
-            <Input
-              id="searchInput"
-              placeholder="Search by name or email (Press '/')"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:w-64"
-            />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <DepartmentTabs 
+                departments={departments} 
+                activeTab={activeTab} 
+                onTabChange={setActiveTab} 
+              />
+              <div className="relative ml-auto w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="searchInput"
+                  placeholder="Find faculty..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
           </CardHeader>
 
           <CardContent className="p-0">
@@ -477,8 +542,8 @@ const FacultyManagement = () => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/40">
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Name</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Faculty</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">ID & Dept</th>
                       <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                       <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Failed</th>
                       <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">Joined</th>
@@ -492,10 +557,24 @@ const FacultyManagement = () => {
                         className={`animate-fade-in transition-colors hover:bg-muted/20 outline-none ${f.isLocked ? "bg-rose-500/5" : ""}`}
                         style={{ animationDelay: `${index * 50}ms` }}
                       >
-                        <td className="px-5 py-4 font-medium text-foreground">
-                          {f.name || "—"}
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-foreground">{f.name || "—"}</span>
+                            <span className="text-xs text-muted-foreground">{f.email}</span>
+                          </div>
                         </td>
-                        <td className="px-5 py-4 text-muted-foreground">{f.email}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5 text-foreground font-medium">
+                              <Hash className="h-3 w-3 text-muted-foreground" />
+                              {f.employeeId || "—"}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Building2 className="h-3 w-3" />
+                              {f.department || "—"}
+                            </div>
+                          </div>
+                        </td>
                         <td className="px-5 py-4 text-center">
                           <StatusBadge isLocked={f.isLocked} />
                         </td>

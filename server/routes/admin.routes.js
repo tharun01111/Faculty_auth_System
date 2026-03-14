@@ -19,7 +19,7 @@ const router = express.Router();
 
 router.post("/login", validate(loginSchema), adminLogin);
 router.post("/logout", adminLogout);
-router.post("/register", protect, adminOnly, validate(adminRegisterSchema), adminRegister);
+router.post("/register", validate(adminRegisterSchema), adminRegister);
 router.get("/stats", protect, adminOnly, getAdminStats);
 
 // Faculty management (admin-only)

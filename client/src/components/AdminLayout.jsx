@@ -1,5 +1,5 @@
-import { useState, useContext } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useState, useContext, useEffect } from "react";
+import { NavLink } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import ThemeToggle from "./ThemeToggle";
 import LogoutButton from "./LogoutButton";
@@ -12,7 +12,10 @@ import {
   Menu,
   X,
   ChevronRight,
+  Search,
+  Command,
 } from "lucide-react";
+import GlobalSearch from "./GlobalSearch";
 
 const NAV_ITEMS = [
   {
@@ -53,7 +56,7 @@ const SideNavLink = ({ to, icon: Icon, label, collapsed, onClick }) => (
   >
     {({ isActive }) => (
       <>
-        <Icon className={`h-4.5 w-4.5 shrink-0 h-[18px] w-[18px] ${isActive ? "text-primary-foreground" : ""}`} />
+        <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? "text-primary-foreground" : ""}`} />
         {!collapsed && <span className="truncate">{label}</span>}
         {/* Tooltip on collapsed */}
         {collapsed && (
@@ -71,7 +74,7 @@ const SideNavLink = ({ to, icon: Icon, label, collapsed, onClick }) => (
 );
 
 // ── Desktop Sidebar ────────────────────────────────────────────────────────────
-const DesktopSidebar = ({ collapsed, setCollapsed, name }) => (
+const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick }) => (
   <aside
     className={`hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border bg-card/80 backdrop-blur-md transition-all duration-300 ${
       collapsed ? "w-[68px]" : "w-56"
@@ -93,6 +96,35 @@ const DesktopSidebar = ({ collapsed, setCollapsed, name }) => (
         </div>
       )}
     </div>
+
+    {/* Search hint (Desktop) */}
+    {!collapsed && (
+      <div className="px-4 py-2">
+        <button 
+          onClick={onSearchClick}
+          className="flex w-full items-center justify-between rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors text-left"
+        >
+          <div className="flex items-center gap-2">
+            <Search className="h-3.5 w-3.5" />
+            <span>Search...</span>
+          </div>
+          <kbd className="flex items-center gap-0.5 rounded border border-border bg-card px-1 font-sans text-[10px] font-medium opacity-100">
+            <span className="text-[12px]">⌘</span>K
+          </kbd>
+        </button>
+      </div>
+    )}
+    {collapsed && (
+      <div className="flex justify-center py-2">
+        <button 
+          onClick={onSearchClick}
+          className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          title="Search (⌘K)"
+        >
+          <Search className="h-5 w-5" />
+        </button>
+      </div>
+    )}
 
     {/* Nav links */}
     <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
@@ -216,29 +248,57 @@ const TopBar = ({ onMenuClick, pageTitle }) => (
         <p className="text-sm font-bold tracking-tight text-foreground">{pageTitle}</p>
       </div>
     </div>
-    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-      ● Admin
-    </span>
+    <div className="flex items-center gap-2">
+      <button 
+        onClick={() => window.dispatchEvent(new CustomEvent('open-global-search'))}
+        className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      >
+        <Search className="h-5 w-5" />
+      </button>
+      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+        ● Admin
+      </span>
+    </div>
   </header>
 );
 
 // ── Main Layout ────────────────────────────────────────────────────────────────
-/**
- * AdminLayout wraps all admin pages with a persistent sidebar.
- *
- * Props:
- *   - children: page content
- *   - pageTitle: string shown in mobile top bar (e.g. "Dashboard")
- */
 const AdminLayout = ({ children, pageTitle = "Admin" }) => {
   const { name } = useContext(AuthContext);
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Keyboard shortcut Ctrl+K
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(prev => !prev);
+      }
+    };
+    
+    // Listen for custom event from TopBar or other components
+    const handleCustomOpen = () => setSearchOpen(true);
+    window.addEventListener("open-global-search", handleCustomOpen);
+    window.addEventListener("keydown", handleKeyDown);
+    
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("open-global-search", handleCustomOpen);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       {/* Desktop sidebar */}
-      <DesktopSidebar collapsed={collapsed} setCollapsed={setCollapsed} name={name} />
+      <DesktopSidebar 
+        collapsed={collapsed} 
+        setCollapsed={setCollapsed} 
+        name={name} 
+        onSearchClick={() => setSearchOpen(true)}
+      />
 
       {/* Mobile drawer */}
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} name={name} />

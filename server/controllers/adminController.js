@@ -16,11 +16,36 @@ export const adminRegister = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    const admin = await Admin.findOne({ email });
+    const adminCount = await Admin.countDocuments();
 
-    if (admin) {
+    // If there's already an admin, only allow other admins to register new ones
+    if (adminCount > 0) {
+      // Manual check for admin token (since we removed protect/adminOnly from the route)
+      let token = req.cookies?.jwt;
+
+      if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+        token = req.headers.authorization.split(" ")[1];
+      }
+
+      if (!token) {
+        return res.status(401).json({ message: "Admin registration is restricted. Please log in as an admin first." });
+      }
+
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.role !== "admin") {
+           return res.status(403).json({ message: "Forbidden: Only admins can register new admins." });
+        }
+      } catch (err) {
+        return res.status(401).json({ message: "Invalid or expired admin token." });
+      }
+    }
+
+    const existingAdmin = await Admin.findOne({ email });
+
+    if (existingAdmin) {
       res.status(400);
-      throw new Error("Admin already exists...");
+      throw new Error("Admin with this email already exists...");
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -159,7 +184,6 @@ export const unlockFaculty = async (req, res, next) => {
   }
 };
 
-// DELETE /admin/faculty/:id — remove a faculty account
 export const deleteFaculty = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -177,6 +201,51 @@ export const deleteFaculty = async (req, res, next) => {
     });
   } catch (err) {
     console.error(`[adminController/deleteFaculty] Type: ${err.name} | ${err.message}`);
+    next(err);
+  }
+};
+
+// POST /admin/faculty/bulk-register
+export const bulkRegisterFaculty = async (req, res, next) => {
+  try {
+    const { faculty } = req.body;
+    if (!Array.isArray(faculty)) {
+      return res.status(400).json({ message: "Invalid data format" });
+    }
+
+    const summary = { created: [], skipped: [], failed: [] };
+    const adminId = req.user?.id;
+
+    for (const f of faculty) {
+      try {
+        const exists = await User.findOne({ 
+          $or: [{ email: f.email }, { employeeId: f.employeeId }] 
+        });
+        if (exists) {
+          summary.skipped.push(f.email);
+          continue;
+        }
+
+        const hash = await bcrypt.hash(f.password, 10);
+        await User.create({
+          ...f,
+          password: hash,
+          createdBy: adminId
+        });
+        
+        // sendWelcomeEmail(newUser); // Optional
+        summary.created.push(f.email);
+      } catch (err) {
+        summary.failed.push({ email: f.email, error: err.message });
+      }
+    }
+
+    res.status(201).json({ 
+      message: `Bulk registration complete: ${summary.created.length} created, ${summary.skipped.length} skipped.`,
+      summary 
+    });
+  } catch (err) {
+    console.error(`[adminController/bulkRegisterFaculty] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };

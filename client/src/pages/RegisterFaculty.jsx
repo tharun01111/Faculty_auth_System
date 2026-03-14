@@ -8,6 +8,7 @@ import api from "../services/api.js";
 import AdminLayout from "../components/AdminLayout";
 import Breadcrumb from "../components/Breadcrumb";
 import PasswordStrength from "../components/PasswordStrength";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -71,11 +72,11 @@ const isRowValid = (row) =>
 // ── Download template helper ───────────────────────────────────────────────────
 const downloadTemplate = () => {
   const ws = XLSX.utils.aoa_to_sheet([
-    ["name", "email", "password"],
-    ["Dr. Ramesh Kumar", "ramesh@college.edu", "Welcome@123"],
-    ["Prof. Meera Nair", "meera@college.edu", "College#456"],
+    ["name", "email", "employeeId", "department", "password"],
+    ["Dr. Ramesh Kumar", "ramesh@college.edu", "FAC001", "Computer Science", "Welcome@123"],
+    ["Prof. Meera Nair", "meera@college.edu", "FAC002", "Mathematics", "College#456"],
   ]);
-  ws["!cols"] = [{ wch: 25 }, { wch: 28 }, { wch: 16 }];
+  ws["!cols"] = [{ wch: 25 }, { wch: 28 }, { wch: 15 }, { wch: 20 }, { wch: 16 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Faculty");
   XLSX.writeFile(wb, "faculty_import_template.xlsx");
@@ -87,6 +88,8 @@ const downloadTemplate = () => {
 const singleFormSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
   email: z.string().trim().email("Must be a valid email address").toLowerCase(),
+  employeeId: z.string().trim().min(2, "ID is too short").max(20, "ID is too long"),
+  department: z.string().trim().min(2, "Department is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirm: z.string()
 }).refine(data => data.password === data.confirm, {
@@ -120,16 +123,22 @@ const SingleForm = () => {
     setSuccess(null);
     setLoading(true);
     try {
-      const res = await api.post("/admin/register", {
+      const res = await api.post("/faculty/register", {
         name: data.name,
         email: data.email,
+        employeeId: data.employeeId,
+        department: data.department,
         password: data.password,
       });
-      setSuccess(res.data.message || "Faculty registered successfully.");
+      const msg = res.data.message || "Faculty registered successfully.";
+      setSuccess(msg);
+      toast.success(msg);
       reset();
       setTimeout(() => navigate("/admin/dashboard"), 1500);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to register faculty.");
+      const msg = err.response?.data?.message || "Failed to register faculty.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -178,6 +187,22 @@ const SingleForm = () => {
                 </Label>
                 <Input id="email" type="email" placeholder="faculty@college.edu" {...register("email")} disabled={loading} />
                 {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="employeeId" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    Employee ID
+                  </Label>
+                  <Input id="employeeId" placeholder="FAC001" {...register("employeeId")} disabled={loading} />
+                  {errors.employeeId && <p className="text-xs text-destructive">{errors.employeeId.message}</p>}
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="department" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    Department
+                  </Label>
+                  <Input id="department" placeholder="Computer Science" {...register("department")} disabled={loading} />
+                  {errors.department && <p className="text-xs text-destructive">{errors.department.message}</p>}
+                </div>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="password" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -288,7 +313,13 @@ const BulkForm = () => {
           Object.keys(row).forEach((k) => {
             lower[k.trim().toLowerCase()] = String(row[k]).trim();
           });
-          return { name: lower["name"] || "", email: lower["email"] || "", password: lower["password"] || "" };
+          return { 
+            name: lower["name"] || "", 
+            email: lower["email"] || "", 
+            employeeId: lower["employeeid"] || lower["employee_id"] || lower["id"] || "",
+            department: lower["department"] || lower["dept"] || "",
+            password: lower["password"] || "" 
+          };
         });
 
         setRows(normalized);
@@ -315,8 +346,11 @@ const BulkForm = () => {
     try {
       const res = await api.post("/admin/faculty/bulk-register", { faculty: validRows });
       setResult(res.data);
+      toast.success(res.data.message || "Bulk import complete!");
     } catch (err) {
-      setResult({ error: err.response?.data?.message || "Failed to import faculty." });
+      const msg = err.response?.data?.message || "Failed to import faculty.";
+      setResult({ error: msg });
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

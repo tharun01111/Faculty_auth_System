@@ -17,6 +17,17 @@ const nameField = z
   .min(2, "Name must be at least 2 characters")
   .max(100, "Name is too long");
 
+const employeeIdField = z
+  .string({ required_error: "Employee ID is required" })
+  .trim()
+  .min(2, "Employee ID must be at least 2 characters")
+  .max(20, "Employee ID is too long");
+
+const departmentField = z
+  .string({ required_error: "Department is required" })
+  .trim()
+  .min(2, "Department name must be at least 2 characters");
+
 // ── Auth schemas ────────────────────────────────────────────────────────────
 
 /** POST /faculty/login  |  POST /admin/login */
@@ -36,6 +47,8 @@ export const adminRegisterSchema = z.object({
 export const facultyRegisterSchema = z.object({
   name: nameField,
   email: emailField,
+  employeeId: employeeIdField,
+  department: departmentField,
   password: passwordField,
 });
 
@@ -64,6 +77,8 @@ export const bulkRegisterSchema = z.object({
       z.object({
         name: nameField,
         email: emailField,
+        employeeId: employeeIdField,
+        department: departmentField,
         password: passwordField,
       })
     )
