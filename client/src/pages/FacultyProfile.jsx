@@ -31,7 +31,7 @@ import {
 
 export default function FacultyProfile() {
   const navigate = useNavigate();
-  const { name, role, lastLogin, logout } = useContext(AuthContext);
+  const { name, role, lastLogin, logout: _logout } = useContext(AuthContext);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");

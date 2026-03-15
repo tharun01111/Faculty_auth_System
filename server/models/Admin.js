@@ -18,6 +18,10 @@ const adminSchema = new mongoose.Schema({
     type: String,
     default: "admin",
    },
+   branding: {
+    logo: { type: String, default: "" },
+    primaryColor: { type: String, default: "#6366f1" }, // Default indigo-500
+   },
 },{ timestamps : true });
 
 const Admin = mongoose.model("Admin", adminSchema);

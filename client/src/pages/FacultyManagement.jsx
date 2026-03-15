@@ -31,25 +31,44 @@ import {
   ShieldAlert,
   AlertTriangle,
   UnlockKeyhole,
+  Eye,
+  Calendar,
+  Mail,
+  Phone,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip } from "../components/ui/tooltip";
+import { Sheet } from "../components/ui/sheet";
+import { Skeleton } from "../components/ui/skeleton";
 
 const PAGE_SIZE = 10;
 
-// ─── Status Badge ──────────────────────────────────────────────────────────────
-const StatusBadge = ({ isLocked }) =>
-  isLocked ? (
+const StatusBadge = ({ isLocked, status }) => {
+  if (isLocked) return (
     <span className="inline-flex items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-0.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
       <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
       Locked
     </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-      Active
+  );
+
+  const colors = {
+    Available: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 bg-emerald-500",
+    "On Leave": "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 bg-rose-500",
+    Meeting: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 bg-amber-500",
+  };
+
+  const current = colors[status] || colors.Available;
+  const dotColor = current.split(" ").pop();
+  const badgeClasses = current.split(" ").slice(0, -1).join(" ");
+
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badgeClasses}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+      {status || "Available"}
     </span>
   );
+};
 
 const formatDate = (iso) => {
   if (!iso) return "—";
@@ -263,6 +282,8 @@ const FacultyManagement = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState("All");
+  const [viewTarget, setViewTarget] = useState(null);
+  const [updatingStatus, setUpdatingStatus] = useState(null);
 
   // ── Departments List ────────────────────────────────────────────────────────
   const departments = [...new Set(faculty.map(f => f.department).filter(Boolean))].sort();
@@ -275,7 +296,7 @@ const FacultyManagement = () => {
       const res = await api.get("/admin/faculty");
       setFaculty(res.data.faculty);
       setFiltered(res.data.faculty);
-    } catch (err) {
+    } catch (_err) {
       setError(err.response?.data?.message || "Failed to load faculty.");
     } finally {
       setLoading(false);
@@ -331,7 +352,7 @@ const FacultyManagement = () => {
         prev.map((f) => (f._id === id ? { ...f, isLocked: false, failedLogin: 0 } : f))
       );
       toast.success(res.data.message);
-    } catch (err) {
+    } catch (_err) {
       toast.error(err.response?.data?.message || "Failed to unlock.");
     } finally {
       setUnlocking(null);
@@ -346,11 +367,28 @@ const FacultyManagement = () => {
       const res = await api.delete(`/admin/faculty/${deleteTarget._id}`);
       setFaculty((prev) => prev.filter((f) => f._id !== deleteTarget._id));
       toast.success(res.data.message);
-    } catch (err) {
+    } catch (_err) {
       toast.error(err.response?.data?.message || "Failed to delete.");
     } finally {
       setDeleting(null);
       setDeleteTarget(null);
+    }
+  };
+
+  // ── Status Change ─────────────────────────────────────────────────────────────
+  const handleStatusChange = async (targetFaculty, newStatus) => {
+    setUpdatingStatus(targetFaculty._id);
+    try {
+      await api.patch(`/admin/faculty/${targetFaculty._id}/status`, { status: newStatus });
+      setFaculty(prev => prev.map(f => f._id === targetFaculty._id ? { ...f, status: newStatus } : f));
+      if (viewTarget?._id === targetFaculty._id) {
+        setViewTarget(prev => ({ ...prev, status: newStatus }));
+      }
+      toast.success(`Status updated to ${newStatus}`);
+    } catch (_err) {
+      toast.error("Failed to update status.");
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
@@ -544,6 +582,7 @@ const FacultyManagement = () => {
                     <tr className="border-b border-border bg-muted/40">
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Faculty</th>
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">ID & Dept</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Security</th>
                       <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                       <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Failed</th>
                       <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">Joined</th>
@@ -576,7 +615,7 @@ const FacultyManagement = () => {
                           </div>
                         </td>
                         <td className="px-5 py-4 text-center">
-                          <StatusBadge isLocked={f.isLocked} />
+                          <StatusBadge isLocked={f.isLocked} status={f.status} />
                         </td>
                         <td className="px-5 py-4 text-center">
                           <span
@@ -590,8 +629,18 @@ const FacultyManagement = () => {
                         <td className="hidden px-5 py-4 text-xs text-muted-foreground lg:table-cell">
                           {formatDate(f.createdAt)}
                         </td>
-                        <td className="px-5 py-4">
+                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end gap-2">
+                            <Tooltip content="Quick View" side="top">
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8"
+                                onClick={() => setViewTarget(f)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Tooltip>
                             {f.isLocked && (
                               <Tooltip content="Unlock Account" side="top">
                                 <Button
@@ -639,8 +688,131 @@ const FacultyManagement = () => {
             )}
           </CardContent>
         </Card>
-      </div>
-    </AdminLayout>
+      {/* Quick View Drawer */}
+      <Sheet
+        isOpen={!!viewTarget}
+        onClose={() => setViewTarget(null)}
+        title="Faculty Overview"
+      >
+        {viewTarget && (
+          <div className="space-y-8">
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Users className="h-10 w-10" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">{viewTarget.name}</h3>
+              <p className="text-sm text-muted-foreground">{viewTarget.email}</p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <StatusBadge isLocked={viewTarget.isLocked} status={viewTarget.status} />
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {viewTarget.role}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500">
+                  <Hash className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Employee ID</p>
+                  <p className="text-sm font-medium text-foreground">{viewTarget.employeeId || "Not Assigned"}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Department</p>
+                  <p className="text-sm font-medium text-foreground">{viewTarget.department || "No Department"}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Joined System</p>
+                  <p className="text-sm font-medium text-foreground">{formatDate(viewTarget.createdAt)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Account Status</p>
+              <div className="grid grid-cols-3 gap-2">
+                {["Available", "On Leave", "Meeting"].map((s) => (
+                  <Button
+                    key={s}
+                    variant={viewTarget.status === s || (!viewTarget.status && s === "Available") ? "default" : "outline"}
+                    size="sm"
+                    className="h-14 flex-col gap-1 text-[10px]"
+                    onClick={() => handleStatusChange(viewTarget, s)}
+                    disabled={updatingStatus === viewTarget._id}
+                  >
+                    {updatingStatus === viewTarget._id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <span className={`h-2 w-2 rounded-full ${
+                        s === "Available" ? "bg-emerald-500" : s === "On Leave" ? "bg-rose-500" : "bg-amber-500"
+                      }`} />
+                    )}
+                    {s}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-muted/40 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Security Context</p>
+                {viewTarget.isLocked ? (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-rose-500">
+                    <ShieldAlert className="h-3 w-3" />
+                    LOCKED
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-500">
+                    <ShieldCheck className="h-3 w-3" />
+                    SECURE
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Failed login attempts:</span>
+                  <span className={`font-mono font-bold ${viewTarget.failedLogin > 0 ? "text-rose-500" : "text-foreground"}`}>
+                    {viewTarget.failedLogin || 0}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Last activity:</span>
+                  <span className="text-foreground">{viewTarget.lastLogin ? formatDate(viewTarget.lastLogin) : "Never"}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button 
+                variant="destructive" 
+                className="flex-1 gap-2"
+                onClick={() => {
+                  setDeleteTarget(viewTarget);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Account
+              </Button>
+            </div>
+          </div>
+        )}
+      </Sheet>
+    </div>
+  </AdminLayout>
   );
 };
 

@@ -90,7 +90,6 @@ const Login = ({ expectedRole }) => {
 
   // Determine error banner style based on error type
   const isLocked = error?.toLowerCase().includes("locked");
-  const isExpired = error?.toLowerCase().includes("expired");
 
   const errorBannerClass = isLocked
     ? "flex items-start gap-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400"

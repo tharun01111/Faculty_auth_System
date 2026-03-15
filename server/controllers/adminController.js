@@ -343,3 +343,50 @@ export const getChartData = async (req, res, next) => {
     next(err);
   }
 };
+
+// GET /admin/branding
+export const getBranding = async (req, res, next) => {
+  try {
+    const admin = await Admin.findOne().select("branding");
+    res.status(200).json(admin?.branding || { logo: "", primaryColor: "#6366f1" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /admin/branding
+export const updateBranding = async (req, res, next) => {
+  try {
+    const { logo, primaryColor } = req.body;
+    let admin = await Admin.findOne();
+    if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+    admin.branding = { logo, primaryColor };
+    await admin.save();
+    res.status(200).json(admin.branding);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /admin/faculty/:id/status
+export const updateFacultyStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["Available", "On Leave", "Meeting"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const faculty = await User.findById(id);
+    if (!faculty) return res.status(404).json({ message: "Faculty not found" });
+
+    faculty.status = status;
+    await faculty.save();
+
+    res.status(200).json({ message: `Status updated to ${status}`, status });
+  } catch (err) {
+    next(err);
+  }
+};

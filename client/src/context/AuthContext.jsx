@@ -1,41 +1,24 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useCallback } from "react";
 
+/* eslint-disable-next-line react-refresh/only-export-components */
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [isAuth, setIsAuth] = useState(false);
-  const [role, setRole] = useState(null);
-  const [name, setName] = useState(null);
-  const [lastLogin, setLastLogin] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [isAuth, setIsAuth] = useState(() => !!sessionStorage.getItem("role"));
+  const [role, setRole] = useState(() => sessionStorage.getItem("role"));
+  const [name, setName] = useState(() => sessionStorage.getItem("name"));
+  const [lastLogin, setLastLogin] = useState(() => sessionStorage.getItem("lastLogin"));
+  const [loading, _setLoading] = useState(false); // No longer need to load on mount since we init from storage
 
-  useEffect(() => {
-    // 1. Read role from storage (cookie handles token)
-    const storedRole = sessionStorage.getItem("role");
-
-    // 2. Validate existence
-    if (storedRole) {
-      setIsAuth(true);
-      setRole(storedRole);
-      const storedLastLogin = sessionStorage.getItem("lastLogin");
-      if (storedLastLogin) setLastLogin(storedLastLogin);
-      const storedName = sessionStorage.getItem("name");
-      if (storedName) setName(storedName);
-    }
-
-    // 3. Finish loading
-    setLoading(false);
-
-    // 4. Listen for API unauthorized events
-    const handleUnauthorized = () => {
-      logout();
-    };
-
-    window.addEventListener("auth:unauthorized", handleUnauthorized);
+  const logout = useCallback(() => {
+    sessionStorage.removeItem("role");
+    sessionStorage.removeItem("lastLogin");
+    sessionStorage.removeItem("name");
     
-    return () => {
-      window.removeEventListener("auth:unauthorized", handleUnauthorized);
-    };
+    setIsAuth(false);
+    setRole(null);
+    setName(null);
+    setLastLogin(null);
   }, []);
 
   const login = (newRole, newLastLogin, newName) => {
@@ -49,16 +32,18 @@ export const AuthProvider = ({ children }) => {
     if (newName) setName(newName);
   };
 
-  const logout = () => {
-    sessionStorage.removeItem("role");
-    sessionStorage.removeItem("lastLogin");
-    sessionStorage.removeItem("name");
+  useEffect(() => {
+    // 4. Listen for API unauthorized events
+    const handleUnauthorized = () => {
+      logout();
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
     
-    setIsAuth(false);
-    setRole(null);
-    setName(null);
-    setLastLogin(null);
-  };
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ isAuth, role, name, lastLogin, loading, login, logout }}>

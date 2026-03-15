@@ -218,7 +218,7 @@ const FacultyDashboard = () => {
           {actionCards.map(({ icon: Icon, title, description, color, bg }) => (
             <button
               key={title}
-              className="group flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5"
+              className="group flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg}`}>
                 <Icon className={`h-5 w-5 ${color}`} />

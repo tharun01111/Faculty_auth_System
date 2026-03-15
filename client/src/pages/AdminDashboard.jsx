@@ -89,10 +89,10 @@ const StatCard = ({ icon: Icon, label, value, sub, iconClass, bgClass }) => (
 const ActionCard = ({ icon: Icon, iconClass, bgClass, title, description, onClick, badge }) => (
   <button
     onClick={onClick}
-    className="group relative flex w-full cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5"
+    className="group relative flex w-full cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/20"
   >
     {badge && (
-      <span className="absolute right-4 top-4 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-bold text-white">
+      <span className="absolute right-4 top-4 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white ring-2 ring-card">
         {badge}
       </span>
     )}
@@ -261,6 +261,68 @@ const AdminDashboard = () => {
               />
             </>
           )}
+        </div>
+        <div className="mb-8 grid gap-6 lg:grid-cols-2">
+          {/* Today's Schedule (Placeholder) */}
+          <Card className="border-border bg-card">
+            <CardContent className="pt-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-foreground">Today's Schedule</h3>
+                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary uppercase">Live</span>
+              </div>
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-4 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
+                    <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-muted text-[10px] font-bold">
+                      <span>09:{i}0</span>
+                      <span className="text-muted-foreground uppercase text-[8px]">AM</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground truncate">Advanced System Architecture</p>
+                      <p className="text-xs text-muted-foreground">Room 40{i} • CSE Department</p>
+                    </div>
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+              <button className="mt-4 w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                View Full Calendar
+              </button>
+            </CardContent>
+          </Card>
+
+          {/* Pending Requests (Placeholder) */}
+          <Card className="border-border bg-card">
+            <CardContent className="pt-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-foreground">Pending Action Items</h3>
+                <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">4 ACTIONS</span>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: "Account Lock Review", sub: "Dr. Sarah Smith • 3 failed attempts", color: "rose" },
+                  { label: "Faculty Access Request", sub: "Department of Physics • New Registration", color: "indigo" },
+                  { label: "System Maintenance", sub: "Scheduled backup pending", color: "amber" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-4 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-${item.color}-500/10 text-${item.color}-500`}>
+                      <TriangleAlert className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground truncate">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.sub}</p>
+                    </div>
+                    <button className="rounded-md bg-muted px-2 py-1 text-[10px] font-bold text-foreground hover:bg-primary hover:text-white transition-colors">
+                      REVIEW
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button className="mt-4 w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                Manage All Tasks
+              </button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Analytics Charts */}

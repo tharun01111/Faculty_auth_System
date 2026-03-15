@@ -14,8 +14,10 @@ import {
   ChevronRight,
   Search,
   Command,
+  Settings,
 } from "lucide-react";
 import GlobalSearch from "./GlobalSearch";
+import api from "../services/api.js";
 
 const NAV_ITEMS = [
   {
@@ -38,10 +40,15 @@ const NAV_ITEMS = [
     icon: ScrollText,
     label: "System Logs",
   },
+  {
+    to: "/admin/settings",
+    icon: Settings,
+    label: "Settings",
+  },
 ];
 
 // ── Sidebar link ───────────────────────────────────────────────────────────────
-const SideNavLink = ({ to, icon: Icon, label, collapsed, onClick }) => (
+const SideNavLink = ({ to, icon: Icon, label, collapsed, onClick }) => ( // eslint-disable-line no-unused-vars
   <NavLink
     to={to}
     onClick={onClick}
@@ -74,7 +81,7 @@ const SideNavLink = ({ to, icon: Icon, label, collapsed, onClick }) => (
 );
 
 // ── Desktop Sidebar ────────────────────────────────────────────────────────────
-const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick }) => (
+const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick, branding }) => (
   <aside
     className={`hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border bg-card/80 backdrop-blur-md transition-all duration-300 ${
       collapsed ? "w-[68px]" : "w-56"
@@ -83,7 +90,11 @@ const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick }) => (
     {/* Logo area */}
     <div className={`flex items-center gap-3 border-b border-border px-4 py-4 ${collapsed ? "justify-center px-2" : ""}`}>
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-        <School className="h-4 w-4" />
+        {branding?.logo ? (
+          <img src={branding.logo} alt="Logo" className="h-5 w-5 object-contain brightness-0 invert" />
+        ) : (
+          <School className="h-4 w-4" />
+        )}
       </div>
       {!collapsed && (
         <div className="min-w-0">
@@ -169,7 +180,7 @@ const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick }) => (
 );
 
 // ── Mobile Drawer ──────────────────────────────────────────────────────────────
-const MobileDrawer = ({ open, onClose, name }) => (
+const MobileDrawer = ({ open, onClose, name, branding }) => (
   <>
     {/* Overlay */}
     {open && (
@@ -187,7 +198,11 @@ const MobileDrawer = ({ open, onClose, name }) => (
       <div className="flex items-center justify-between border-b border-border px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <School className="h-4 w-4" />
+            {branding?.logo ? (
+              <img src={branding.logo} alt="Logo" className="h-5 w-5 object-contain brightness-0 invert" />
+            ) : (
+              <School className="h-4 w-4" />
+            )}
           </div>
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground leading-none">
@@ -231,7 +246,7 @@ const MobileDrawer = ({ open, onClose, name }) => (
 );
 
 // ── Top Bar (mobile) ───────────────────────────────────────────────────────────
-const TopBar = ({ onMenuClick, pageTitle }) => (
+const TopBar = ({ onMenuClick, pageTitle, branding }) => (
   <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card/80 backdrop-blur-sm px-4 py-3 lg:hidden">
     <div className="flex items-center gap-3">
       <button
@@ -243,7 +258,11 @@ const TopBar = ({ onMenuClick, pageTitle }) => (
       </button>
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-          <School className="h-3.5 w-3.5" />
+          {branding?.logo ? (
+            <img src={branding.logo} alt="Logo" className="h-4 w-4 object-contain brightness-0 invert" />
+          ) : (
+            <School className="h-3.5 w-3.5" />
+          )}
         </div>
         <p className="text-sm font-bold tracking-tight text-foreground">{pageTitle}</p>
       </div>
@@ -268,6 +287,19 @@ const AdminLayout = ({ children, pageTitle = "Admin" }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [branding, setBranding] = useState({ logo: null });
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const { data } = await api.get("/admin/branding");
+        setBranding(data);
+      } catch (err) {
+        console.error("Failed to load branding:", err);
+      }
+    };
+    fetchBranding();
+  }, []);
 
   // Keyboard shortcut Ctrl+K
   useEffect(() => {
@@ -298,15 +330,16 @@ const AdminLayout = ({ children, pageTitle = "Admin" }) => {
         setCollapsed={setCollapsed} 
         name={name} 
         onSearchClick={() => setSearchOpen(true)}
+        branding={branding}
       />
 
       {/* Mobile drawer */}
-      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} name={name} />
+      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} name={name} branding={branding} />
 
       {/* Main content area — offset by sidebar width on desktop */}
       <div className={`transition-all duration-300 ${collapsed ? "lg:pl-[68px]" : "lg:pl-56"}`}>
         {/* Mobile top bar */}
-        <TopBar onMenuClick={() => setDrawerOpen(true)} pageTitle={pageTitle} />
+        <TopBar onMenuClick={() => setDrawerOpen(true)} pageTitle={pageTitle} branding={branding} />
 
         {/* Page content */}
         <main>{children}</main>

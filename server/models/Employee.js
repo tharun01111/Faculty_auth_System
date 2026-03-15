@@ -52,6 +52,11 @@ const facultySchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  status: {
+    type: String,
+    enum: ["Available", "On Leave", "Meeting"],
+    default: "Available",
+  },
   createdAt: {
     type: Date,
     default: Date.now,

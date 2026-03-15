@@ -3,6 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Search, User, Ghost, Loader2, X, Command, Hash, Building2 } from "lucide-react";
 import api from "../services/api";
 
+const StatusDot = ({ status }) => {
+  const colors = {
+    Available: "bg-emerald-500",
+    "On Leave": "bg-rose-500",
+    Meeting: "bg-amber-500",
+  };
+  return <span className={`h-1.5 w-1.5 rounded-full ${colors[status] || "bg-emerald-500"}`} />;
+};
+
 const GlobalSearch = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -71,7 +80,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleSelect = (faculty) => {
+  const handleSelect = (_faculty) => {
     onClose();
     // For now, redirect to faculty management or a specific view if available
     // Since we don't have a detail page yet, we'll go to management
@@ -138,9 +147,13 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <div className="flex items-center gap-1 text-xs opacity-80">
+                      <div className="flex items-center gap-1.5 text-xs opacity-80">
                         <Building2 className="h-3 w-3" />
                         <span>{f.department || "No Dept"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px] font-medium opacity-80">
+                        <StatusDot status={f.status} />
+                        <span>{f.status || "Available"}</span>
                       </div>
                       <div className="flex items-center gap-1 text-xs opacity-80">
                         <Hash className="h-3 w-3" />

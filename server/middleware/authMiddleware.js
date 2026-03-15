@@ -42,10 +42,16 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: "Session expired, please log in again" });
     }
 
+    if (error.name === "JsonWebTokenError") {
+      console.error(`[authMiddleware] Invalid JWT | Route: ${req.method} ${req.originalUrl} | ${error.message}`);
+      return res.status(401).json({ message: "Not authorized, invalid token" });
+    }
+
+    // Database or other errors
     console.error(
-      `[authMiddleware] Invalid token | Type: ${error.name} | Route: ${req.method} ${req.originalUrl} | ${error.message}`
+      `[authMiddleware] Server Error (${error.name}) | Route: ${req.method} ${req.originalUrl} | ${error.message}`
     );
-    return res.status(401).json({ message: "Not authorized, invalid token" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 

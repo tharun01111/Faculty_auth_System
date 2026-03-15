@@ -9,6 +9,9 @@ import {
   getLoginLogs,
   getChartData,
   adminLogout,
+  getBranding,
+  updateBranding,
+  updateFacultyStatus,
 } from "../controllers/adminController.js";
 import { register, bulkRegister } from "../controllers/userController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
@@ -33,5 +36,10 @@ router.get("/logs", protect, adminOnly, getLoginLogs);
 
 // Analytics chart data (admin-only)
 router.get("/charts", protect, adminOnly, getChartData);
+
+// Branding & Status (admin-only, except GET branding which is public for CSS vars)
+router.get("/branding", getBranding);
+router.patch("/branding", protect, adminOnly, updateBranding);
+router.patch("/faculty/:id/status", protect, adminOnly, updateFacultyStatus);
 
 export default router;

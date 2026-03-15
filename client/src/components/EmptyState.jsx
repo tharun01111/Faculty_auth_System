@@ -1,5 +1,6 @@
 import { SearchX } from "lucide-react";
 
+/* eslint-disable no-unused-vars */
 export const EmptyState = ({ 
   title = "No results found", 
   description = "We couldn't find what you were looking for.", 
@@ -9,6 +10,7 @@ export const EmptyState = ({
   isSearch = false,
   search = ""
 }) => {
+/* eslint-enable no-unused-vars */
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center animate-fade-in">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50 mb-4">

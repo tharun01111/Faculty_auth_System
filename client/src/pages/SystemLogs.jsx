@@ -53,7 +53,6 @@ const formatDate = (iso) => {
 };
 
 const SystemLogs = () => {
-  const navigate = useNavigate();
   const [logs, setLogs] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);

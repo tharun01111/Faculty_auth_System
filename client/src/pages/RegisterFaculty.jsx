@@ -135,7 +135,7 @@ const SingleForm = () => {
       toast.success(msg);
       reset();
       setTimeout(() => navigate("/admin/dashboard"), 1500);
-    } catch (err) {
+    } catch (_err) {
       const msg = err.response?.data?.message || "Failed to register faculty.";
       setError(msg);
       toast.error(msg);
@@ -323,7 +323,7 @@ const BulkForm = () => {
         });
 
         setRows(normalized);
-      } catch (err) {
+      } catch (_err) {
         setParseError("Could not parse the file. Make sure it's a valid Excel or CSV file.");
       }
     };
@@ -347,7 +347,7 @@ const BulkForm = () => {
       const res = await api.post("/admin/faculty/bulk-register", { faculty: validRows });
       setResult(res.data);
       toast.success(res.data.message || "Bulk import complete!");
-    } catch (err) {
+    } catch (_err) {
       const msg = err.response?.data?.message || "Failed to import faculty.";
       setResult({ error: msg });
       toast.error(msg);

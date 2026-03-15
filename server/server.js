@@ -37,9 +37,6 @@ app.use(express.json());
 app.use(cookieParser());
 
 // ── Security Headers (Helmet) ─────────────────────────────────────────────
-// Sets 14 security-related HTTP headers automatically.
-// contentSecurityPolicy disabled in dev to avoid blocking localhost assets;
-// re-enable (or customise) in production.
 app.use(
   helmet({
     contentSecurityPolicy: process.env.NODE_ENV === "production",
@@ -57,46 +54,39 @@ const loginLimiter = rateLimit({
   },
 });
 
-// Database Connection
-connectDb().then(() => {
-  pruneOldLogs();
-  // Run pruning every 24 hours
-  setInterval(pruneOldLogs, 24 * 60 * 60 * 1000);
-});
-
 // ── Routes ────────────────────────────────────────────────────────────────────
-// Apply rate limiter only to login routes
 app.use("/faculty/login", loginLimiter);
 app.use("/admin/login", loginLimiter);
 
 app.use("/faculty", facultyRoutes);
 app.use("/admin", adminRoutes);
 
-// Health check
 app.get("/api/test", (req, res) => {
   res.json({ message: "The app is working..." });
 });
 
-// ── 404 — must be placed after all valid routes ────────────────────────────────
+// ── 404 & Error Handlers ──────────────────────────────────────────────────────
 app.use(notFoundHandler);
-
-// ── Global Error Handler ──────────────────────────────────────────────────────
 app.use(errorHandler);
 
+// ── Database Connection & Server Start ────────────────────────────────────────
 const PORT = process.env.PORT || 8080;
-const server = app.listen(PORT, () => {
-  console.log(`[Server] Running on http://localhost:${PORT}`);
-});
 
-// ── Process-level safety nets ─────────────────────────────────────────────────
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("[Process] Unhandled Promise Rejection:", reason);
-  // Gracefully shut down so the process manager can restart
-  server.close(() => process.exit(1));
-});
+connectDb().then(() => {
+  pruneOldLogs();
+  setInterval(pruneOldLogs, 24 * 60 * 60 * 1000);
 
-process.on("uncaughtException", (err) => {
-  console.error("[Process] Uncaught Exception:", err.name, "|", err.message);
-  console.error(err.stack);
-  process.exit(1);
+  const server = app.listen(PORT, () => {
+    console.log(`[Server] Running on http://localhost:${PORT}`);
+  });
+
+  process.on("unhandledRejection", (reason, promise) => {
+    console.error("[Process] Unhandled Promise Rejection:", reason);
+    server.close(() => process.exit(1));
+  });
+
+  process.on("uncaughtException", (err) => {
+    console.error("[Process] Uncaught Exception:", err.name, "|", err.message);
+    process.exit(1);
+  });
 });
