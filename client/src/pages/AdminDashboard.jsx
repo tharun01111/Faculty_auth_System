@@ -39,7 +39,7 @@ import {
 const shimmerClass = "animate-shimmer bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:400%_100%]";
 
 const StatSkeleton = () => (
-  <Card className="border-border bg-card">
+  <Card className="bg-card">
     <CardContent className="pt-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -66,7 +66,7 @@ const ChartSkeleton = () => (
 );
 
 const StatCard = ({ icon: Icon, label, value, sub, iconClass, bgClass }) => (
-  <Card className="border-border bg-card">
+  <Card className="bg-card">
     <CardContent className="pt-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -89,7 +89,7 @@ const StatCard = ({ icon: Icon, label, value, sub, iconClass, bgClass }) => (
 const ActionCard = ({ icon: Icon, iconClass, bgClass, title, description, onClick, badge }) => (
   <button
     onClick={onClick}
-    className="group relative flex w-full cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/20"
+    className="group relative flex w-full cursor-pointer flex-col gap-3 rounded-xl border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/20"
   >
     {badge && (
       <span className="absolute right-4 top-4 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white ring-2 ring-card">
@@ -112,7 +112,7 @@ const ActionCard = ({ icon: Icon, iconClass, bgClass, title, description, onClic
 const BarTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-lg text-xs">
+    <div className="rounded-lg border bg-card px-3 py-2 shadow-lg text-xs">
       <p className="mb-1 font-semibold text-foreground">{label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2">
@@ -129,7 +129,7 @@ const BarTooltip = ({ active, payload, label }) => {
 const PieTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-lg text-xs">
+    <div className="rounded-lg border bg-card px-3 py-2 shadow-lg text-xs">
       <div className="flex items-center gap-2">
         <span className="inline-block h-2 w-2 rounded-full" style={{ background: payload[0].payload.fill }} />
         <span className="text-muted-foreground">{payload[0].name}:</span>
@@ -264,7 +264,7 @@ const AdminDashboard = () => {
         </div>
         <div className="mb-8 grid gap-6 lg:grid-cols-2">
           {/* Today's Schedule (Placeholder) */}
-          <Card className="border-border bg-card">
+          <Card className="bg-card">
             <CardContent className="pt-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-foreground">Today's Schedule</h3>
@@ -272,7 +272,7 @@ const AdminDashboard = () => {
               </div>
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-4 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
+                  <div key={i} className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/50">
                     <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-muted text-[10px] font-bold">
                       <span>09:{i}0</span>
                       <span className="text-muted-foreground uppercase text-[8px]">AM</span>
@@ -285,14 +285,14 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
-              <button className="mt-4 w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <button className="mt-4 w-full rounded-lg border border-dashed py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 View Full Calendar
               </button>
             </CardContent>
           </Card>
 
           {/* Pending Requests (Placeholder) */}
-          <Card className="border-border bg-card">
+          <Card className="bg-card">
             <CardContent className="pt-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-foreground">Pending Action Items</h3>
@@ -304,7 +304,7 @@ const AdminDashboard = () => {
                   { label: "Faculty Access Request", sub: "Department of Physics • New Registration", color: "indigo" },
                   { label: "System Maintenance", sub: "Scheduled backup pending", color: "amber" },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-4 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
+                  <div key={i} className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/50">
                     <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-${item.color}-500/10 text-${item.color}-500`}>
                       <TriangleAlert className="h-5 w-5" />
                     </div>
@@ -318,7 +318,7 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
-              <button className="mt-4 w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <button className="mt-4 w-full rounded-lg border border-dashed py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 Manage All Tasks
               </button>
             </CardContent>
@@ -334,7 +334,7 @@ const AdminDashboard = () => {
         </div>
         <div className="mb-8 grid gap-4 lg:grid-cols-3">
           {/* Bar Chart */}
-          <Card className="border-border bg-card lg:col-span-2">
+          <Card className="bg-card lg:col-span-2">
             <CardContent className="pt-5">
               <p className="mb-1 text-sm font-semibold text-foreground">Login Activity</p>
               <p className="mb-4 text-xs text-muted-foreground">Success vs failures over the last 7 days</p>
@@ -364,7 +364,7 @@ const AdminDashboard = () => {
           </Card>
 
           {/* Pie Chart */}
-          <Card className="border-border bg-card">
+          <Card className="bg-card">
             <CardContent className="pt-5">
               <p className="mb-1 text-sm font-semibold text-foreground">Account Status</p>
               <p className="mb-4 text-xs text-muted-foreground">Active vs locked accounts</p>
@@ -399,7 +399,7 @@ const AdminDashboard = () => {
           <button
             onClick={() => fetchAll(true)}
             disabled={refreshing}
-            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground disabled:opacity-50"
             title="Refresh stats"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
@@ -436,7 +436,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Security Notice */}
-        <div className="mt-10 rounded-xl border border-border bg-muted/40 p-5">
+        <div className="mt-10 rounded-xl border bg-muted/40 p-5">
           <div className="flex items-start gap-3">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <ShieldCheck className="h-4 w-4 text-primary" />

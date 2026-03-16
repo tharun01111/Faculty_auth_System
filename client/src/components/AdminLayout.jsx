@@ -83,7 +83,7 @@ const SideNavLink = ({ to, icon: Icon, label, collapsed, onClick }) => ( // esli
 // ── Desktop Sidebar ────────────────────────────────────────────────────────────
 const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick, branding }) => (
   <aside
-    className={`hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border bg-card/80 backdrop-blur-md transition-all duration-300 ${
+    className={`hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border bg-card transition-all duration-300 ${
       collapsed ? "w-[68px]" : "w-56"
     }`}
   >
@@ -191,7 +191,7 @@ const MobileDrawer = ({ open, onClose, name, branding }) => (
     )}
     {/* Drawer */}
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card/80 backdrop-blur-md transition-transform duration-300 lg:hidden ${
+      className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card transition-transform duration-300 lg:hidden ${
         open ? "translate-x-0" : "-translate-x-full"
       }`}
     >
