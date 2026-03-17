@@ -575,36 +575,131 @@ const FacultyManagement = () => {
             )}
 
             {/* Table */}
+            {/* Desktop Table & Mobile Card View */}
             {!loading && !error && filtered.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/40">
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Faculty</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">ID & Dept</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Security</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Failed</th>
-                      <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">Joined</th>
-                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {paginated.map((f, index) => (
-                      <tr
-                        key={f._id}
-                        className={`animate-fade-in transition-colors hover:bg-muted/20 outline-none ${f.isLocked ? "bg-rose-500/5" : ""}`}
-                        style={{ animationDelay: `${index * 50}ms` }}
-                      >
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-foreground">{f.name || "—"}</span>
-                            <span className="text-xs text-muted-foreground">{f.email}</span>
+              <>
+                {/* Desktop Table - Hidden on LG and below */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40">
+                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Faculty</th>
+                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">ID & Dept</th>
+                        <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Security</th>
+                        <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Failed</th>
+                        <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">Joined</th>
+                        <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {paginated.map((f, index) => (
+                        <tr
+                          key={f._id}
+                          className={`animate-fade-in transition-colors hover:bg-muted/20 outline-none ${f.isLocked ? "bg-rose-500/5" : ""}`}
+                          style={{ animationDelay: `${index * 50}ms` }}
+                        >
+                          <td className="px-5 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-foreground">{f.name || "—"}</span>
+                              <span className="text-xs text-muted-foreground">{f.email}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1.5 text-foreground font-medium">
+                                <Hash className="h-3 w-3 text-muted-foreground" />
+                                {f.employeeId || "—"}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Building2 className="h-3 w-3" />
+                                {f.department || "—"}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-center">
+                            <StatusBadge isLocked={f.isLocked} status={f.status} />
+                          </td>
+                          <td className="px-5 py-4 text-center">
+                            <span
+                              className={`font-mono font-semibold ${
+                                f.failedLogin > 0 ? "text-rose-500" : "text-muted-foreground"
+                              }`}
+                            >
+                              {f.failedLogin}
+                            </span>
+                          </td>
+                          <td className="hidden px-5 py-4 text-xs text-muted-foreground lg:table-cell">
+                            {formatDate(f.createdAt)}
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <Tooltip content="Quick View" side="top">
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-9 w-9"
+                                  onClick={() => setViewTarget(f)}
+                                >
+                                  <Eye className="h-4.5 w-4.5" />
+                                </Button>
+                              </Tooltip>
+                              {f.isLocked && (
+                                <Tooltip content="Unlock Account" side="top">
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-9 w-9 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 dark:text-amber-400"
+                                    onClick={() => handleUnlock(f._id)}
+                                    disabled={unlocking === f._id}
+                                    aria-label="Unlock Account"
+                                  >
+                                    {unlocking === f._id ? (
+                                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                                    ) : (
+                                      <UnlockKeyhole className="h-4.5 w-4.5" />
+                                    )}
+                                  </Button>
+                                </Tooltip>
+                              )}
+                              <Tooltip content="Delete Faculty" side="top">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-9 w-9 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={() => setDeleteTarget(f)}
+                                  disabled={!!deleting}
+                                  aria-label="Delete Faculty"
+                                >
+                                  <Trash2 className="h-4.5 w-4.5" />
+                                </Button>
+                              </Tooltip>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View - Hidden on LG and above */}
+                <div className="block lg:hidden divide-y divide-border">
+                  {paginated.map((f, index) => (
+                    <div
+                      key={f._id}
+                      className={`p-4 transition-colors hover:bg-muted/10 animate-fade-in ${f.isLocked ? "bg-rose-500/5" : ""}`}
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-foreground truncate">{f.name || "—"}</span>
+                            <StatusBadge isLocked={f.isLocked} status={f.status} />
                           </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5 text-foreground font-medium">
+                          <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-2">
+                             <Mail className="h-3 w-3" /> {f.email}
+                          </p>
+                          <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
                               <Hash className="h-3 w-3 text-muted-foreground" />
                               {f.employeeId || "—"}
                             </div>
@@ -613,70 +708,44 @@ const FacultyManagement = () => {
                               {f.department || "—"}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          <StatusBadge isLocked={f.isLocked} status={f.status} />
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          <span
-                            className={`font-mono font-semibold ${
-                              f.failedLogin > 0 ? "text-rose-500" : "text-muted-foreground"
-                            }`}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-11 w-11 shrink-0"
+                            onClick={() => setViewTarget(f)}
+                            aria-label="Quick View"
                           >
-                            {f.failedLogin}
-                          </span>
-                        </td>
-                        <td className="hidden px-5 py-4 text-xs text-muted-foreground lg:table-cell">
-                          {formatDate(f.createdAt)}
-                        </td>
-                         <td className="px-5 py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <Tooltip content="Quick View" side="top">
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-8 w-8"
-                                onClick={() => setViewTarget(f)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </Tooltip>
-                            {f.isLocked && (
-                              <Tooltip content="Unlock Account" side="top">
-                                <Button
-                                  size="icon"
-                                  variant="outline"
-                                  className="h-8 w-8 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 dark:text-amber-400"
-                                  onClick={() => handleUnlock(f._id)}
-                                  disabled={unlocking === f._id}
-                                  aria-label="Unlock Account"
-                                >
-                                  {unlocking === f._id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <UnlockKeyhole className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </Tooltip>
-                            )}
-                            <Tooltip content="Delete Faculty" side="top">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => setDeleteTarget(f)}
-                                disabled={!!deleting}
-                                aria-label="Delete Faculty"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </Tooltip>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            <Eye className="h-5 w-5" />
+                          </Button>
+                          {f.isLocked && (
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-11 w-11 shrink-0 border-amber-500/40 text-amber-600"
+                              onClick={() => handleUnlock(f._id)}
+                              disabled={unlocking === f._id}
+                              aria-label="Unlock Account"
+                            >
+                              <UnlockKeyhole className="h-5 w-5" />
+                            </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-11 w-11 shrink-0 text-muted-foreground"
+                            onClick={() => setDeleteTarget(f)}
+                            disabled={!!deleting}
+                            aria-label="Delete Faculty"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 {/* Pagination */}
                 <PaginationBar
@@ -684,8 +753,9 @@ const FacultyManagement = () => {
                   totalPages={totalPages}
                   onChange={setPage}
                 />
-              </div>
+              </>
             )}
+
           </CardContent>
         </Card>
       {/* Quick View Drawer */}

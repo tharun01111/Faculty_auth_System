@@ -338,15 +338,15 @@ const AdminDashboard = () => {
             <CardContent className="pt-5">
               <p className="mb-1 text-sm font-semibold text-foreground">Login Activity</p>
               <p className="mb-4 text-xs text-muted-foreground">Success vs failures over the last 7 days</p>
-              <div className="h-56">
+              <div className="aspect-[4/3] sm:aspect-video w-full min-h-[220px]">
                 {chartsLoading ? (
                   <ChartSkeleton />
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={chartData?.loginActivity ?? []}
-                      margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
-                      barCategoryGap="35%"
+                      margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
+                      barCategoryGap="25%"
                       barGap={3}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -368,7 +368,7 @@ const AdminDashboard = () => {
             <CardContent className="pt-5">
               <p className="mb-1 text-sm font-semibold text-foreground">Account Status</p>
               <p className="mb-4 text-xs text-muted-foreground">Active vs locked accounts</p>
-              <div className="h-56">
+              <div className="aspect-[4/3] sm:aspect-video w-full min-h-[220px]">
                 {chartsLoading ? (
                   <div className="flex h-full items-center justify-center">
                     <div className={`h-36 w-36 rounded-full border-[10px] border-transparent p-1 ${shimmerClass} [mask-image:radial-gradient(transparent_55%,black_56%)]`} />
@@ -376,7 +376,7 @@ const AdminDashboard = () => {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={pieData ?? []} cx="50%" cy="45%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value" strokeWidth={0} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out">
+                      <Pie data={pieData ?? []} cx="50%" cy="50%" innerRadius="60%" outerRadius="80%" paddingAngle={5} dataKey="value" strokeWidth={0} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out">
                         {(pieData ?? []).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}

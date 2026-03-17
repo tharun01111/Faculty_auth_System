@@ -251,10 +251,10 @@ const TopBar = ({ onMenuClick, pageTitle, branding }) => (
     <div className="flex items-center gap-3">
       <button
         onClick={onMenuClick}
-        className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        className="rounded-lg p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         aria-label="Open navigation menu"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-6 w-6" />
       </button>
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
@@ -270,9 +270,10 @@ const TopBar = ({ onMenuClick, pageTitle, branding }) => (
     <div className="flex items-center gap-2">
       <button 
         onClick={() => window.dispatchEvent(new CustomEvent('open-global-search'))}
-        className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        className="rounded-lg p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        aria-label="Search"
       >
-        <Search className="h-5 w-5" />
+        <Search className="h-6 w-6" />
       </button>
       <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
         ● Admin

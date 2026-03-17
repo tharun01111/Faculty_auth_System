@@ -185,7 +185,7 @@ const SingleForm = () => {
                 <Label htmlFor="email" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Mail className="h-3.5 w-3.5" /> Email Address
                 </Label>
-                <Input id="email" type="email" placeholder="faculty@college.edu" {...register("email")} disabled={loading} />
+                <Input id="email" type="email" inputMode="email" placeholder="faculty@college.edu" {...register("email")} disabled={loading} />
                 {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -407,9 +407,9 @@ const BulkForm = () => {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
               <UploadCloud className="h-6 w-6 text-violet-500" />
             </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-foreground">Drop your file here or click to browse</p>
-              <p className="mt-1 text-xs text-muted-foreground">Supports .xlsx, .xls, .csv — max 200 rows</p>
+            <div className="text-center px-4">
+              <p className="text-sm font-semibold text-foreground">Click to browse or drop file here</p>
+              <p className="mt-1 text-xs text-muted-foreground">Supports .xlsx, .xls, .csv (Max 200 rows)</p>
             </div>
             <input
               ref={fileInputRef}
@@ -450,9 +450,9 @@ const BulkForm = () => {
                   <thead className="sticky top-0 border-b border-border bg-muted/60">
                     <tr>
                       <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">#</th>
-                      <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">Name</th>
-                      <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">Email</th>
-                      <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">Password</th>
+                      <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">Faculty</th>
+                      <th className="hidden sm:table-cell px-4 py-2.5 text-left font-semibold text-muted-foreground">Email</th>
+                      <th className="hidden lg:table-cell px-4 py-2.5 text-left font-semibold text-muted-foreground">Password</th>
                       <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground">Status</th>
                     </tr>
                   </thead>
@@ -460,9 +460,14 @@ const BulkForm = () => {
                     {rows.map((row, i) => (
                       <tr key={i} className={`transition-colors ${isRowValid(row) ? "hover:bg-muted/10" : "bg-rose-500/5"}`}>
                         <td className="px-4 py-2.5 font-mono text-muted-foreground">{i + 1}</td>
-                        <td className="px-4 py-2.5 font-medium text-foreground">{row.name || <span className="text-muted-foreground italic">—</span>}</td>
-                        <td className="px-4 py-2.5 text-muted-foreground">{row.email || <span className="italic">—</span>}</td>
                         <td className="px-4 py-2.5">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-foreground">{row.name || <span className="text-muted-foreground italic">—</span>}</span>
+                            <span className="sm:hidden text-[10px] text-muted-foreground truncate max-w-[120px]">{row.email}</span>
+                          </div>
+                        </td>
+                        <td className="hidden sm:table-cell px-4 py-2.5 text-muted-foreground">{row.email || <span className="italic">—</span>}</td>
+                        <td className="hidden lg:table-cell px-4 py-2.5">
                           <span className="font-mono text-muted-foreground tracking-widest">{row.password ? "••••••••" : "—"}</span>
                         </td>
                         <td className="px-4 py-2.5"><RowBadge row={row} /></td>
