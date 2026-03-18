@@ -57,6 +57,29 @@ const facultySchema = new mongoose.Schema({
     enum: ["Available", "On Leave", "Meeting"],
     default: "Available",
   },
+  // ── Academic Portfolio ────────────────────────────────────────────────────────
+  qualification: {
+    type: String,
+    default: "",
+  },
+  specialization: {
+    type: String,
+    default: "",
+  },
+  publications: {
+    type: Number,
+    default: 0,
+  },
+  fdpsAttended: {
+    type: Number,
+    default: 0,
+  },
+  // ── Assigned Assets ─────────────────────────────────────────────────────────
+  assets: {
+    laptop: { type: String, default: "" },
+    cabinNo: { type: String, default: "" },
+    libraryId: { type: String, default: "" },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

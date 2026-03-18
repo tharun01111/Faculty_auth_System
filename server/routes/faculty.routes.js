@@ -6,7 +6,9 @@ import {
   resetPassword,
   changePassword,
   logout,
+  getMe,
 } from "../controllers/userController.js";
+import { logAttendance, getMyAttendance, deleteAttendanceLog } from "../controllers/attendanceController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 import { validate } from "../middleware/validateRequest.js";
 import {
@@ -33,4 +35,13 @@ router.post("/register", protect, adminOnly, validate(facultyRegisterSchema), re
 // Protected: Change password for logged-in faculty
 router.patch("/change-password", protect, validate(changePasswordSchema), changePassword);
 
+// Protected: Get own profile
+router.get("/me", protect, getMe);
+
+// Attendance (faculty, must be logged in)
+router.post("/attendance", protect, logAttendance);
+router.get("/attendance", protect, getMyAttendance);
+router.delete("/attendance/:id", protect, deleteAttendanceLog);
+
 export default router;
+

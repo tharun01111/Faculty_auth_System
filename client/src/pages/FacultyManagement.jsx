@@ -36,6 +36,8 @@ import {
   Mail,
   Phone,
   Briefcase,
+  CheckSquare,
+  X as XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip } from "../components/ui/tooltip";
@@ -115,11 +117,11 @@ const TableSkeleton = ({ rows = 5 }) => (
 // ─── Empty State ──────────────────────────────────────────────────────────────
 const EmptyState = ({ isSearch, search, onClear, onRegister, department }) => (
   <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
       {isSearch ? (
-        <SearchX className="h-7 w-7 text-muted-foreground/60" />
+        <SearchX className="h-6 w-6 text-muted-foreground/60" />
       ) : (
-        <Building2 className="h-7 w-7 text-muted-foreground/60" />
+        <Building2 className="h-6 w-6 text-muted-foreground/60" />
       )}
     </div>
     <div>
@@ -181,8 +183,8 @@ const DepartmentTabs = ({ departments, activeTab, onTabChange }) => (
 const DeleteModal = ({ faculty, onConfirm, onCancel, loading }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
     <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
-        <Trash2 className="h-5 w-5 text-destructive" />
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10">
+        <Trash2 className="h-4.5 w-4.5 text-destructive" />
       </div>
       <h2 className="mt-4 text-base font-semibold text-foreground">Delete Faculty Account</h2>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -216,6 +218,50 @@ const DeleteModal = ({ faculty, onConfirm, onCancel, loading }) => (
     </div>
   </div>
 );
+
+// ─── Bulk Status Modal ──────────────────────────────────────────────────────
+const BulkStatusModal = ({ count, onConfirm, onCancel, loading }) => {
+  const [status, setStatus] = useState("Available");
+  const statuses = [
+    { value: "Available", color: "text-emerald-600", dot: "bg-emerald-500" },
+    { value: "On Leave",  color: "text-rose-600",    dot: "bg-rose-500" },
+    { value: "Meeting",   color: "text-amber-600",   dot: "bg-amber-500" },
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+          <CheckSquare className="h-4.5 w-4.5 text-primary" />
+        </div>
+        <h2 className="mt-4 text-base font-semibold text-foreground">Bulk Status Update</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Set status for <strong>{count}</strong> selected faculty:</p>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {statuses.map((s) => (
+            <button
+              key={s.value}
+              onClick={() => setStatus(s.value)}
+              className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-xs font-semibold transition-all ${
+                status === s.value
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <span className={`h-3 w-3 rounded-full ${s.dot}`} />
+              {s.value}
+            </button>
+          ))}
+        </div>
+        <div className="mt-5 flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={onCancel} disabled={loading}>Cancel</Button>
+          <Button className="flex-1 gap-2" onClick={() => onConfirm(status)} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckSquare className="h-4 w-4" />}
+            Apply
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── Pagination Bar ───────────────────────────────────────────────────────────
 const PaginationBar = ({ page, totalPages, onChange }) => {
@@ -284,6 +330,12 @@ const FacultyManagement = () => {
   const [activeTab, setActiveTab] = useState("All");
   const [viewTarget, setViewTarget] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(null);
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkStatusModal, setBulkStatusModal] = useState(false);
+  const [bulkUpdatingStatus, setBulkUpdatingStatus] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // ── Departments List ────────────────────────────────────────────────────────
   const departments = [...new Set(faculty.map(f => f.department).filter(Boolean))].sort();
@@ -305,7 +357,7 @@ const FacultyManagement = () => {
 
   useEffect(() => { fetchFaculty(); }, [fetchFaculty]);
 
-  // ── Search filter ─────────────────────────────────────────────────────────────
+  // ── Search filter: also clear selection on filter change ──────────────────────
   useEffect(() => {
     const q = search.toLowerCase();
     let result = faculty;
@@ -328,6 +380,7 @@ const FacultyManagement = () => {
     
     setFiltered(result);
     setPage(1); // reset to first page on filter change
+    setSelectedIds([]); // clear selection when filter changes
   }, [search, faculty, activeTab]);
 
   // ── Keyboard shortcut ──────────────────────────────────────────────────────────
@@ -392,6 +445,38 @@ const FacultyManagement = () => {
     }
   };
 
+  // ── Bulk Delete ────────────────────────────────────────────────────────────────
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      const res = await api.delete("/admin/faculty/bulk", { data: { ids: selectedIds } });
+      setFaculty(prev => prev.filter(f => !selectedIds.includes(f._id)));
+      setSelectedIds([]);
+      setShowBulkDeleteConfirm(false);
+      toast.success(res.data.message);
+    } catch (_err) {
+      toast.error("Bulk delete failed.");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  // ── Bulk Status Update ─────────────────────────────────────────────────────────
+  const handleBulkStatus = async (newStatus) => {
+    setBulkUpdatingStatus(true);
+    try {
+      const res = await api.patch("/admin/faculty/bulk-status", { ids: selectedIds, status: newStatus });
+      setFaculty(prev => prev.map(f => selectedIds.includes(f._id) ? { ...f, status: newStatus } : f));
+      setSelectedIds([]);
+      setBulkStatusModal(false);
+      toast.success(res.data.message);
+    } catch (_err) {
+      toast.error("Bulk status update failed.");
+    } finally {
+      setBulkUpdatingStatus(false);
+    }
+  };
+
   // ── Stats ──────────────────────────────────────────────────────────────────────
   const totalLocked = faculty.filter((f) => f.isLocked).length;
   const totalActive = faculty.filter((f) => !f.isLocked).length;
@@ -433,6 +518,38 @@ const FacultyManagement = () => {
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
           loading={!!deleting}
+        />
+      )}
+
+      {/* Bulk Delete Confirm */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10">
+              <Trash2 className="h-4.5 w-4.5 text-destructive" />
+            </div>
+            <h2 className="mt-4 text-base font-semibold text-foreground">Bulk Delete Faculty</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Are you sure you want to permanently delete <strong>{selectedIds.length}</strong> selected faculty accounts? This cannot be undone.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setShowBulkDeleteConfirm(false)} disabled={bulkDeleting}>Cancel</Button>
+              <Button variant="destructive" className="flex-1 gap-2" onClick={handleBulkDelete} disabled={bulkDeleting}>
+                {bulkDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Delete All
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Status Modal */}
+      {bulkStatusModal && (
+        <BulkStatusModal
+          count={selectedIds.length}
+          onConfirm={handleBulkStatus}
+          onCancel={() => setBulkStatusModal(false)}
+          loading={bulkUpdatingStatus}
         />
       )}
 
@@ -486,8 +603,8 @@ const FacultyManagement = () => {
                   <p className="text-xs font-medium text-muted-foreground">Total Faculty</p>
                   <p className="mt-1 text-3xl font-bold text-foreground">{faculty.length}</p>
                 </div>
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10">
-                  <Users className="h-5 w-5 text-indigo-500" />
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10">
+                  <Users className="h-4.5 w-4.5 text-indigo-500" />
                 </span>
               </div>
             </CardContent>
@@ -501,8 +618,8 @@ const FacultyManagement = () => {
                     {totalActive}
                   </p>
                 </div>
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                  <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+                  <ShieldCheck className="h-4.5 w-4.5 text-emerald-500" />
                 </span>
               </div>
             </CardContent>
@@ -516,8 +633,8 @@ const FacultyManagement = () => {
                     {totalLocked}
                   </p>
                 </div>
-                <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${totalLocked > 0 ? "bg-rose-500/10" : "bg-muted"}`}>
-                  <ShieldAlert className={`h-5 w-5 ${totalLocked > 0 ? "text-rose-500" : "text-muted-foreground"}`} />
+                <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${totalLocked > 0 ? "bg-rose-500/10" : "bg-muted"}`}>
+                  <ShieldAlert className={`h-4.5 w-4.5 ${totalLocked > 0 ? "text-rose-500" : "text-muted-foreground"}`} />
                 </span>
               </div>
             </CardContent>
@@ -583,8 +700,23 @@ const FacultyManagement = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-muted/40">
+                        <th className="px-3 py-3 text-left">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-border accent-primary"
+                            checked={paginated.length > 0 && paginated.every(f => selectedIds.includes(f._id))}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedIds(prev => [...new Set([...prev, ...paginated.map(f => f._id)])]);
+                              } else {
+                                setSelectedIds(prev => prev.filter(id => !paginated.map(f => f._id).includes(id)));
+                              }
+                            }}
+                            aria-label="Select all"
+                          />
+                        </th>
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Faculty</th>
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">ID & Dept</th>
+                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">ID &amp; Dept</th>
                         <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Security</th>
                         <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Failed</th>
                         <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">Joined</th>
@@ -595,9 +727,24 @@ const FacultyManagement = () => {
                       {paginated.map((f, index) => (
                         <tr
                           key={f._id}
-                          className={`animate-fade-in transition-colors hover:bg-muted/20 outline-none ${f.isLocked ? "bg-rose-500/5" : ""}`}
+                          className={`animate-fade-in transition-colors hover:bg-muted/20 outline-none ${f.isLocked ? "bg-rose-500/5" : ""} ${selectedIds.includes(f._id) ? "bg-primary/5" : ""}`}
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
+                          <td className="px-3 py-4">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-border accent-primary"
+                              checked={selectedIds.includes(f._id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedIds(prev => [...prev, f._id]);
+                                } else {
+                                  setSelectedIds(prev => prev.filter(id => id !== f._id));
+                                }
+                              }}
+                              aria-label={`Select ${f.name}`}
+                            />
+                          </td>
                           <td className="px-5 py-4">
                             <div className="flex flex-col">
                               <span className="font-semibold text-foreground">{f.name || "—"}</span>
@@ -637,10 +784,10 @@ const FacultyManagement = () => {
                                 <Button
                                   size="icon"
                                   variant="outline"
-                                  className="h-9 w-9"
+                                  className="h-8.5 w-8.5"
                                   onClick={() => setViewTarget(f)}
                                 >
-                                  <Eye className="h-4.5 w-4.5" />
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                               </Tooltip>
                               {f.isLocked && (
@@ -648,15 +795,15 @@ const FacultyManagement = () => {
                                   <Button
                                     size="icon"
                                     variant="outline"
-                                    className="h-9 w-9 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 dark:text-amber-400"
+                                    className="h-8.5 w-8.5 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 dark:text-amber-400"
                                     onClick={() => handleUnlock(f._id)}
                                     disabled={unlocking === f._id}
                                     aria-label="Unlock Account"
                                   >
                                     {unlocking === f._id ? (
-                                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                                      <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : (
-                                      <UnlockKeyhole className="h-4.5 w-4.5" />
+                                      <UnlockKeyhole className="h-4 w-4" />
                                     )}
                                   </Button>
                                 </Tooltip>
@@ -665,12 +812,12 @@ const FacultyManagement = () => {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-9 w-9 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                  className="h-8.5 w-8.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                   onClick={() => setDeleteTarget(f)}
                                   disabled={!!deleting}
                                   aria-label="Delete Faculty"
                                 >
-                                  <Trash2 className="h-4.5 w-4.5" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </Tooltip>
                             </div>
@@ -713,33 +860,33 @@ const FacultyManagement = () => {
                           <Button
                             size="icon"
                             variant="outline"
-                            className="h-11 w-11 shrink-0"
+                            className="h-9 w-9 shrink-0"
                             onClick={() => setViewTarget(f)}
                             aria-label="Quick View"
                           >
-                            <Eye className="h-5 w-5" />
+                            <Eye className="h-4 w-4" />
                           </Button>
                           {f.isLocked && (
                             <Button
                               size="icon"
                               variant="outline"
-                              className="h-11 w-11 shrink-0 border-amber-500/40 text-amber-600"
+                              className="h-9 w-9 shrink-0 border-amber-500/40 text-amber-600"
                               onClick={() => handleUnlock(f._id)}
                               disabled={unlocking === f._id}
                               aria-label="Unlock Account"
                             >
-                              <UnlockKeyhole className="h-5 w-5" />
+                              <UnlockKeyhole className="h-4 w-4" />
                             </Button>
                           )}
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-11 w-11 shrink-0 text-muted-foreground"
+                            className="h-9 w-9 shrink-0 text-muted-foreground"
                             onClick={() => setDeleteTarget(f)}
                             disabled={!!deleting}
                             aria-label="Delete Faculty"
                           >
-                            <Trash2 className="h-5 w-5" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -758,6 +905,42 @@ const FacultyManagement = () => {
 
           </CardContent>
         </Card>
+
+      {/* Floating Bulk Action Bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-3 shadow-2xl ring-1 ring-border/50">
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+              {selectedIds.length} selected
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => setBulkStatusModal(true)}
+            >
+              <CheckSquare className="h-3.5 w-3.5" />
+              Set Status
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="gap-1.5"
+              onClick={() => setShowBulkDeleteConfirm(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </Button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="ml-1 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              aria-label="Clear selection"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
       {/* Quick View Drawer */}
       <Sheet
         isOpen={!!viewTarget}
@@ -767,8 +950,8 @@ const FacultyManagement = () => {
         {viewTarget && (
           <div className="space-y-8">
             <div className="flex flex-col items-center text-center">
-              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Users className="h-10 w-10" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Users className="h-8 w-8" />
               </div>
               <h3 className="text-xl font-bold text-foreground">{viewTarget.name}</h3>
               <p className="text-sm text-muted-foreground">{viewTarget.email}</p>
@@ -782,8 +965,8 @@ const FacultyManagement = () => {
 
             <div className="grid gap-4">
               <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500">
-                  <Hash className="h-5 w-5" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500">
+                  <Hash className="h-4.5 w-4.5" />
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Employee ID</p>
@@ -792,8 +975,8 @@ const FacultyManagement = () => {
               </div>
 
               <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500">
-                  <Building2 className="h-5 w-5" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500">
+                  <Building2 className="h-4.5 w-4.5" />
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Department</p>
@@ -802,8 +985,8 @@ const FacultyManagement = () => {
               </div>
 
               <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-                  <Calendar className="h-5 w-5" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+                  <Calendar className="h-4.5 w-4.5" />
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Joined System</p>

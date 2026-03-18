@@ -91,9 +91,9 @@ const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick, branding
     <div className={`flex items-center gap-3 border-b border-border px-4 py-4 ${collapsed ? "justify-center px-2" : ""}`}>
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
         {branding?.logo ? (
-          <img src={branding.logo} alt="Logo" className="h-5 w-5 object-contain brightness-0 invert" />
+          <img src={branding.logo} alt="Logo" className="h-4 w-4 object-contain brightness-0 invert" />
         ) : (
-          <School className="h-4 w-4" />
+          <School className="h-3.5 w-3.5" />
         )}
       </div>
       {!collapsed && (
@@ -132,7 +132,7 @@ const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick, branding
           className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           title="Search (⌘K)"
         >
-          <Search className="h-5 w-5" />
+          <Search className="h-4 w-4" />
         </button>
       </div>
     )}
@@ -197,11 +197,11 @@ const MobileDrawer = ({ open, onClose, name, branding }) => (
     >
       <div className="flex items-center justify-between border-b border-border px-4 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
             {branding?.logo ? (
-              <img src={branding.logo} alt="Logo" className="h-5 w-5 object-contain brightness-0 invert" />
+              <img src={branding.logo} alt="Logo" className="h-4 w-4 object-contain brightness-0 invert" />
             ) : (
-              <School className="h-4 w-4" />
+              <School className="h-3.5 w-3.5" />
             )}
           </div>
           <div>
@@ -251,17 +251,17 @@ const TopBar = ({ onMenuClick, pageTitle, branding }) => (
     <div className="flex items-center gap-3">
       <button
         onClick={onMenuClick}
-        className="rounded-lg p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         aria-label="Open navigation menu"
       >
-        <Menu className="h-6 w-6" />
+        <Menu className="h-5 w-5" />
       </button>
-      <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
           {branding?.logo ? (
-            <img src={branding.logo} alt="Logo" className="h-4 w-4 object-contain brightness-0 invert" />
+            <img src={branding.logo} alt="Logo" className="h-3.5 w-3.5 object-contain brightness-0 invert" />
           ) : (
-            <School className="h-3.5 w-3.5" />
+            <School className="h-3 w-3" />
           )}
         </div>
         <p className="text-sm font-bold tracking-tight text-foreground">{pageTitle}</p>
@@ -270,10 +270,10 @@ const TopBar = ({ onMenuClick, pageTitle, branding }) => (
     <div className="flex items-center gap-2">
       <button 
         onClick={() => window.dispatchEvent(new CustomEvent('open-global-search'))}
-        className="rounded-lg p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         aria-label="Search"
       >
-        <Search className="h-6 w-6" />
+        <Search className="h-5 w-5" />
       </button>
       <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
         ● Admin

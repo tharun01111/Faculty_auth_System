@@ -283,6 +283,17 @@ export const changePassword = async (req, res, next) => {
   }
 };
 
+// GET /faculty/me — logged-in faculty's own profile
+export const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password -resetPasswordToken -resetPasswordExpires").lean();
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── Bulk Register ───────────────────────────────────────────────────────────────
 // POST /admin/faculty/bulk-register  { faculty: [{name, email, password}] }
 export const bulkRegister = async (req, res, next) => {

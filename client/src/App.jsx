@@ -14,6 +14,7 @@ import AdminDashboard from "./pages/AdminDashboard.jsx";
 import FacultyManagement from "./pages/FacultyManagement.jsx";
 import FacultyDashboard from "./pages/FacultyDashboard.jsx";
 import FacultyProfile from "./pages/FacultyProfile.jsx";
+import AttendancePage from "./pages/AttendancePage.jsx";
 import RegisterFaculty from "./pages/RegisterFaculty.jsx";
 import SystemLogs from "./pages/SystemLogs.jsx";
 import Unauthorized from "./pages/Unauthorized.jsx";
@@ -136,6 +137,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={["faculty"]} />}>
         <Route path="/faculty/dashboard" element={<FacultyDashboard />} />
         <Route path="/faculty/profile" element={<FacultyProfile />} />
+        <Route path="/faculty/attendance" element={<AttendancePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

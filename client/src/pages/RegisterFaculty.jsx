@@ -148,8 +148,8 @@ const SingleForm = () => {
     <div className="grid gap-8 lg:grid-cols-5">
       {/* Info panel */}
       <div className="lg:col-span-2">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
-          <UserPlus className="h-6 w-6 text-emerald-500" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
+          <UserPlus className="h-5 w-5 text-emerald-500" />
         </div>
         <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground">Add New Faculty</h2>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -368,8 +368,8 @@ const BulkForm = () => {
     <div className="grid gap-8 lg:grid-cols-5">
       {/* Info panel */}
       <div className="lg:col-span-2">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
-          <Sparkles className="h-6 w-6 text-violet-500" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10">
+          <Sparkles className="h-5 w-5 text-violet-500" />
         </div>
         <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground">Bulk Import</h2>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -404,8 +404,8 @@ const BulkForm = () => {
                 : "border-border hover:border-violet-500/50 hover:bg-muted/30"
             }`}
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
-              <UploadCloud className="h-6 w-6 text-violet-500" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10">
+              <UploadCloud className="h-5 w-5 text-violet-500" />
             </div>
             <div className="text-center px-4">
               <p className="text-sm font-semibold text-foreground">Click to browse or drop file here</p>
@@ -493,7 +493,7 @@ const BulkForm = () => {
           <Card className="border-emerald-500/30 bg-emerald-500/5">
             <CardContent className="pt-5 pb-5 space-y-3">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 <p className="font-semibold text-foreground">Import Complete</p>
               </div>
               <div className="grid grid-cols-3 gap-3">

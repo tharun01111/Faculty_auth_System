@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import LogoutButton from "../components/LogoutButton";
 import ThemeToggle from "../components/ThemeToggle";
@@ -91,7 +91,7 @@ const formatLastLogin = (isoString) => {
 const StatSkeleton = () => (
   <Card className="border-border bg-card">
     <CardContent className="flex items-center gap-4 pt-6">
-      <div className="h-10 w-10 shrink-0 rounded-lg bg-muted animate-pulse" />
+      <div className="h-8 w-8 shrink-0 rounded-lg bg-muted animate-pulse" />
       <div className="min-w-0 flex-1">
         <div className="h-3 w-20 rounded bg-muted animate-pulse" />
         <div className="mt-2 h-7 w-12 rounded bg-muted animate-pulse" />
@@ -101,6 +101,7 @@ const StatSkeleton = () => (
 );
 
 const FacultyDashboard = () => {
+  const navigate = useNavigate();
   const { lastLogin, name } = useContext(AuthContext);
   const [loadingStats, setLoadingStats] = useState(true);
   const greeting = getGreeting();
@@ -118,8 +119,8 @@ const FacultyDashboard = () => {
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <GraduationCap className="h-5 w-5" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <GraduationCap className="h-4 w-4" />
             </div>
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -133,7 +134,7 @@ const FacultyDashboard = () => {
           <div className="flex items-center gap-2">
             <Link
               to="/faculty/profile"
-              className="flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground sm:text-sm"
+              className="flex h-8.5 items-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground sm:text-sm"
             >
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -173,8 +174,8 @@ const FacultyDashboard = () => {
             <>
               <Card className="border-border bg-card">
                 <CardContent className="flex items-center gap-4 pt-6">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
-                    <CalendarDays className="h-5 w-5 text-indigo-500" />
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
+                    <CalendarDays className="h-4 w-4 text-indigo-500" />
                   </span>
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Today's Classes</p>
@@ -185,8 +186,8 @@ const FacultyDashboard = () => {
 
               <Card className="border-border bg-card">
                 <CardContent className="flex items-center gap-4 pt-6">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10">
-                    <Users className="h-5 w-5 text-sky-500" />
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/10">
+                    <Users className="h-4 w-4 text-sky-500" />
                   </span>
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Total Students</p>
@@ -197,8 +198,8 @@ const FacultyDashboard = () => {
 
               <Card className="border-border bg-card">
                 <CardContent className="flex items-center gap-4 pt-6">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-                    <FileBarChart2 className="h-5 w-5 text-emerald-500" />
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
+                    <FileBarChart2 className="h-4 w-4 text-emerald-500" />
                   </span>
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Pending Reports</p>
@@ -218,10 +219,13 @@ const FacultyDashboard = () => {
           {actionCards.map(({ icon: Icon, title, description, color, bg }) => (
             <button
               key={title}
+              onClick={() => {
+                if (title === "Attendance") navigate("/faculty/attendance");
+              }}
               className="group flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg}`}>
-                <Icon className={`h-5 w-5 ${color}`} />
+              <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${bg}`}>
+                <Icon className={`h-4 w-4 ${color}`} />
               </span>
               <div>
                 <p className="font-semibold text-foreground transition-colors group-hover:text-primary">
@@ -236,8 +240,8 @@ const FacultyDashboard = () => {
         {/* ── Notice ── */}
         <div className="mt-10 rounded-xl border border-border bg-muted/40 p-5">
           <div className="flex items-start gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <Bell className="h-4 w-4 text-primary" />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Bell className="h-3.5 w-3.5 text-primary" />
             </span>
             <div>
               <p className="text-sm font-semibold text-foreground">No new announcements</p>

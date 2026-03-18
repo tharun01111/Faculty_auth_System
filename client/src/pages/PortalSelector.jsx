@@ -64,8 +64,8 @@ const PortalSelector = () => {
       <div className="flex w-full max-w-sm flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
         {/* Branding */}
         <div className="mb-12 text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-[0_0_25px_-5px_rgba(var(--primary),0.5)] transition-transform hover:scale-105 duration-300">
-            <ShieldCheck className="h-8 w-8 text-primary-foreground" />
+          <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-[0_0_25px_-5px_rgba(var(--primary),0.5)] transition-transform hover:scale-105 duration-300">
+            <ShieldCheck className="h-6 w-6 text-primary-foreground" />
           </div>
           <h1 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl">
             Faculty Auth System
@@ -91,8 +91,8 @@ const PortalSelector = () => {
               className={`group relative flex w-full items-center gap-5 rounded-2xl border border-border/50 bg-card/40 p-5 text-left backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:bg-card/60 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] animate-in slide-in-from-bottom-4 duration-500 fill-mode-both`}
               style={{ animationDelay: `${idx * 150}ms` }}
             >
-              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 ${bg}`}>
-                <Icon className={`h-6 w-6 ${iconClass}`} />
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 ${bg}`}>
+                <Icon className={`h-5 w-5 ${iconClass}`} />
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-lg font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">

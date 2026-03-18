@@ -6,13 +6,18 @@ import {
   getAllFaculty,
   unlockFaculty,
   deleteFaculty,
+  bulkDeleteFaculty,
+  bulkUpdateFacultyStatus,
   getLoginLogs,
   getChartData,
+  getRecentActivity,
   adminLogout,
   getBranding,
   updateBranding,
   updateFacultyStatus,
+  getAuditLogs,
 } from "../controllers/adminController.js";
+import { getAdminAttendance } from "../controllers/attendanceController.js";
 import { register, bulkRegister } from "../controllers/userController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 import { validate } from "../middleware/validateRequest.js";
@@ -30,16 +35,24 @@ router.get("/faculty", protect, adminOnly, getAllFaculty);
 router.patch("/faculty/:id/unlock", protect, adminOnly, unlockFaculty);
 router.delete("/faculty/:id", protect, adminOnly, deleteFaculty);
 router.post("/faculty/bulk-register", protect, adminOnly, validate(bulkRegisterSchema), bulkRegister);
+// Bulk operations
+router.delete("/faculty/bulk", protect, adminOnly, bulkDeleteFaculty);
+router.patch("/faculty/bulk-status", protect, adminOnly, bulkUpdateFacultyStatus);
+router.patch("/faculty/:id/status", protect, adminOnly, updateFacultyStatus);
 
-// Audit logs (admin-only)
+// Audit & activity logs (admin-only)
 router.get("/logs", protect, adminOnly, getLoginLogs);
+router.get("/audit-logs", protect, adminOnly, getAuditLogs);
+router.get("/activity", protect, adminOnly, getRecentActivity);
 
 // Analytics chart data (admin-only)
 router.get("/charts", protect, adminOnly, getChartData);
 
-// Branding & Status (admin-only, except GET branding which is public for CSS vars)
+// Admin attendance view
+router.get("/attendance", protect, adminOnly, getAdminAttendance);
+
+// Branding (GET is public for CSS vars)
 router.get("/branding", getBranding);
 router.patch("/branding", protect, adminOnly, updateBranding);
-router.patch("/faculty/:id/status", protect, adminOnly, updateFacultyStatus);
 
 export default router;

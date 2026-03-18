@@ -117,8 +117,8 @@ const Login = ({ expectedRole }) => {
       <div className="w-full max-w-sm">
         {/* Role badge */}
         <div className="mb-6 text-center">
-          <div className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${config.bg}`}>
-            <Icon className={`h-6 w-6 ${config.iconClass}`} />
+          <div className={`mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${config.bg}`}>
+            <Icon className={`h-5 w-5 ${config.iconClass}`} />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {config.label}

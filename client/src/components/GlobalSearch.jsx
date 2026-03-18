@@ -99,7 +99,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
         className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200"
       >
         <div className="relative flex items-center border-b border-border px-4">
-          <Search className="h-5 w-5 text-muted-foreground" />
+          <Search className="h-4 w-4 text-muted-foreground" />
           <input
             ref={inputRef}
             className="flex h-14 w-full bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
@@ -132,10 +132,10 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                   onClick={() => handleSelect(f)}
                   onMouseEnter={() => setActiveIndex(i)}
                 >
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                     i === activeIndex ? "bg-white/20" : "bg-primary/10 text-primary"
                   }`}>
-                    <User className="h-5 w-5" />
+                    <User className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
           ) : query ? (
             !loading && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Ghost className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                <Ghost className="h-8 w-8 text-muted-foreground/40 mb-3" />
                 <p className="text-sm font-medium text-foreground">No results found</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   We couldn't find any faculty matching "{query}"

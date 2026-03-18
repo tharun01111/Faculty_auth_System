@@ -20,6 +20,10 @@ import {
   UserCheck,
   RefreshCw,
   BarChart2,
+  Clock,
+  CheckCircle2,
+  Coffee,
+  CalendarClock,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -47,7 +51,7 @@ const StatSkeleton = () => (
           <div className={`mt-2 h-8 w-14 rounded ${shimmerClass}`} />
           <div className={`mt-1.5 h-3 w-32 rounded ${shimmerClass}`} />
         </div>
-        <div className={`h-10 w-10 shrink-0 rounded-lg ${shimmerClass}`} />
+        <div className={`h-8 w-8 shrink-0 rounded-lg ${shimmerClass}`} />
       </div>
     </CardContent>
   </Card>
@@ -78,8 +82,8 @@ const StatCard = ({ icon: Icon, label, value, sub, iconClass, bgClass }) => (
             <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
           )}
         </div>
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${bgClass}`}>
-          <Icon className={`h-5 w-5 ${iconClass}`} />
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${bgClass}`}>
+          <Icon className={`h-4 w-4 ${iconClass}`} />
         </span>
       </div>
     </CardContent>
@@ -96,8 +100,8 @@ const ActionCard = ({ icon: Icon, iconClass, bgClass, title, description, onClic
         {badge}
       </span>
     )}
-    <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${bgClass}`}>
-      <Icon className={`h-5 w-5 ${iconClass}`} />
+    <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${bgClass}`}>
+      <Icon className={`h-4 w-4 ${iconClass}`} />
     </span>
     <div>
       <p className="font-semibold text-foreground transition-colors group-hover:text-primary">
@@ -154,6 +158,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [lockedCount, setLockedCount] = useState(null);
+  const [activityFeed, setActivityFeed] = useState(null);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -161,13 +166,15 @@ const AdminDashboard = () => {
     if (showSpinner) setRefreshing(true);
     setError(null);
     try {
-      const [statsRes, chartRes] = await Promise.all([
+      const [statsRes, chartRes, activityRes] = await Promise.all([
         api.get("/admin/stats"),
         api.get("/admin/charts"),
+        api.get("/admin/activity"),
       ]);
       setStats(statsRes.data);
       setLockedCount(statsRes.data.lockedAccounts ?? 0);
       setChartData(chartRes.data);
+      setActivityFeed(activityRes.data.logs ?? []);
     } catch (err) {
       setError("Failed to load dashboard data. Check your connection and try again.");
       console.error(err);
@@ -206,7 +213,7 @@ const AdminDashboard = () => {
         {/* Greeting */}
         <div className="mb-8">
           <div className="flex items-center gap-2">
-            <LayoutDashboard className="h-5 w-5 text-primary" />
+            <LayoutDashboard className="h-4 w-4 text-primary" />
             <h2 className="text-2xl font-bold tracking-tight text-foreground">
               {getTimeGreeting()}{name ? `, ${name}` : ""} 👋
             </h2>
@@ -216,8 +223,8 @@ const AdminDashboard = () => {
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Stats Row 1 */}
+        <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statsLoading ? (
             <>
               <StatSkeleton />
@@ -262,31 +269,108 @@ const AdminDashboard = () => {
             </>
           )}
         </div>
+
+        {/* Stats Row 2 — Workforce Status */}
+        <div className="mb-8 grid gap-4 sm:grid-cols-3">
+          {statsLoading ? (
+            <>
+              <StatSkeleton />
+              <StatSkeleton />
+              <StatSkeleton />
+            </>
+          ) : (
+            <>
+              <StatCard
+                icon={CheckCircle2}
+                label="Available Now"
+                value={stats?.workforceStatus?.available ?? "—"}
+                sub="Ready to be assigned"
+                iconClass="text-emerald-500"
+                bgClass="bg-emerald-500/10"
+              />
+              <StatCard
+                icon={CalendarClock}
+                label="On Leave"
+                value={stats?.workforceStatus?.onLeave ?? "—"}
+                sub="Currently on leave"
+                iconClass="text-rose-500"
+                bgClass="bg-rose-500/10"
+              />
+              <StatCard
+                icon={Coffee}
+                label="In Meeting"
+                value={stats?.workforceStatus?.inMeeting ?? "—"}
+                sub="Marked as in meeting"
+                iconClass="text-amber-500"
+                bgClass="bg-amber-500/10"
+              />
+            </>
+          )}
+        </div>
         <div className="mb-8 grid gap-6 lg:grid-cols-2">
-          {/* Today's Schedule (Placeholder) */}
+          {/* Recent Activity Feed */}
           <Card className="bg-card">
             <CardContent className="pt-6">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-foreground">Today's Schedule</h3>
+                <h3 className="text-sm font-bold text-foreground">Recent Activity</h3>
                 <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary uppercase">Live</span>
               </div>
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/50">
-                    <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-muted text-[10px] font-bold">
-                      <span>09:{i}0</span>
-                      <span className="text-muted-foreground uppercase text-[8px]">AM</span>
+              {activityFeed === null ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className={`h-12 rounded-lg ${shimmerClass}`} />
+                  ))}
+                </div>
+              ) : activityFeed.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Activity className="mb-2 h-6 w-6 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">No recent login events</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {activityFeed.slice(0, 8).map((log, i) => (
+                    <div
+                      key={log._id || i}
+                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <div
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                          log.status === "SUCCESS"
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : "bg-rose-500/10 text-rose-600"
+                        }`}
+                      >
+                        {log.status === "SUCCESS" ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <Lock className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-foreground">{log.email}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {log.status === "SUCCESS" ? "Logged in" : "Failed login"} •{" "}
+                          {new Date(log.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+                        </p>
+                      </div>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${
+                          log.status === "SUCCESS"
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : "bg-rose-500/10 text-rose-600"
+                        }`}
+                      >
+                        {log.status}
+                      </span>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-foreground truncate">Advanced System Architecture</p>
-                      <p className="text-xs text-muted-foreground">Room 40{i} • CSE Department</p>
-                    </div>
-                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  </div>
-                ))}
-              </div>
-              <button className="mt-4 w-full rounded-lg border border-dashed py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                View Full Calendar
+                  ))}
+                </div>
+              )}
+              <button
+                className="mt-4 w-full rounded-lg border border-dashed py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                onClick={() => navigate("/admin/logs")}
+              >
+                View Full Audit Trail
               </button>
             </CardContent>
           </Card>
@@ -305,8 +389,8 @@ const AdminDashboard = () => {
                   { label: "System Maintenance", sub: "Scheduled backup pending", color: "amber" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/50">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-${item.color}-500/10 text-${item.color}-500`}>
-                      <TriangleAlert className="h-5 w-5" />
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-${item.color}-500/10 text-${item.color}-500`}>
+                      <TriangleAlert className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-foreground truncate">{item.label}</p>

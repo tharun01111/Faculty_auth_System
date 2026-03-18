@@ -84,8 +84,8 @@ const ResetPassword = () => {
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10">
-            <ShieldCheck className="h-6 w-6 text-indigo-500" />
+          <div className="mx-auto mb-4 flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10">
+            <ShieldCheck className="h-4 w-4 text-indigo-500" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Reset Password
@@ -100,8 +100,8 @@ const ResetPassword = () => {
           {success ? (
             /* Success state */
             <div className="flex flex-col items-center gap-4 py-2 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
-                <CheckCircle2 className="h-6 w-6 text-green-500" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/10">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
               </div>
               <div>
                 <p className="font-semibold text-foreground">Password updated!</p>

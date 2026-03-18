@@ -1,6 +1,7 @@
 import Admin from "../models/Admin.js";
 import User from "../models/Employee.js"; // Faculty model
 import Logs from "../models/LoginLog.js";
+import AuditLog from "../models/AuditLog.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sendWelcomeEmail, sendAccountUnlockedEmail } from "../services/emailService.js";
@@ -107,13 +108,16 @@ const makeToken = async (admin) => {
 // GET /admin/stats — real counts from DB
 export const getAdminStats = async (req, res, next) => {
   try {
-    const [totalFaculty, lockedAccounts, totalLogs] = await Promise.all([
+    const [totalFaculty, lockedAccounts, totalLogs, onLeave, inMeeting] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ isLocked: true }),
       Logs.countDocuments(),
+      User.countDocuments({ isLocked: false, status: "On Leave" }),
+      User.countDocuments({ isLocked: false, status: "Meeting" }),
     ]);
 
     const activeAccounts = totalFaculty - lockedAccounts;
+    const available = totalFaculty - lockedAccounts - onLeave - inMeeting;
 
     // Last 24h login events
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -127,10 +131,25 @@ export const getAdminStats = async (req, res, next) => {
       lockedAccounts,
       activeAccounts,
       recentLogins,
+      workforceStatus: { available, onLeave, inMeeting },
       systemHealth: "Good",
     });
   } catch (err) {
     console.error(`[adminController/getAdminStats] Type: ${err.name} | ${err.message}`);
+    next(err);
+  }
+};
+
+// GET /admin/activity — recent login events feed
+export const getRecentActivity = async (req, res, next) => {
+  try {
+    const logs = await Logs.find()
+      .sort({ createdAt: -1 })
+      .limit(12)
+      .lean();
+    res.status(200).json({ logs });
+  } catch (err) {
+    console.error(`[adminController/getRecentActivity] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
@@ -168,6 +187,16 @@ export const unlockFaculty = async (req, res, next) => {
     // Fire account-unlocked email (non-blocking)
     sendAccountUnlockedEmail(faculty);
 
+    // Audit log
+    AuditLog.create({
+      action: "UNLOCK_ACCOUNT",
+      performedBy: req.user?.id,
+      performedByName: "Admin",
+      targetFaculty: faculty.email,
+      targetFacultyName: faculty.name,
+      description: `Unlocked account for ${faculty.name} (${faculty.email})`,
+    }).catch(() => {});
+
     res.status(200).json({
       message: `Account for ${faculty.email} has been unlocked`,
       faculty: {
@@ -196,11 +225,79 @@ export const deleteFaculty = async (req, res, next) => {
 
     await User.findByIdAndDelete(id);
 
+    // Audit log
+    AuditLog.create({
+      action: "DELETE_FACULTY",
+      performedBy: req.user?.id,
+      performedByName: "Admin",
+      targetFaculty: faculty.email,
+      targetFacultyName: faculty.name,
+      description: `Deleted faculty account: ${faculty.name} (${faculty.email}) — Dept: ${faculty.department || "N/A"}`,
+    }).catch(() => {});
+
     res.status(200).json({
       message: `Faculty account for ${faculty.email} has been deleted`,
     });
   } catch (err) {
     console.error(`[adminController/deleteFaculty] Type: ${err.name} | ${err.message}`);
+    next(err);
+  }
+};
+
+// DELETE /admin/faculty/bulk — bulk delete faculty by IDs
+export const bulkDeleteFaculty = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "No IDs provided" });
+    }
+
+    const facultyList = await User.find({ _id: { $in: ids } }).select("name email department");
+    await User.deleteMany({ _id: { $in: ids } });
+
+    // Audit log
+    AuditLog.create({
+      action: "BULK_DELETE",
+      performedBy: req.user?.id,
+      performedByName: "Admin",
+      targetFaculty: facultyList.map(f => f.email).join(", "),
+      targetFacultyName: facultyList.map(f => f.name).join(", "),
+      description: `Bulk deleted ${facultyList.length} faculty account(s).`,
+    }).catch(() => {});
+
+    res.status(200).json({ message: `${facultyList.length} faculty account(s) deleted.`, deleted: ids.length });
+  } catch (err) {
+    console.error(`[adminController/bulkDeleteFaculty] Type: ${err.name} | ${err.message}`);
+    next(err);
+  }
+};
+
+// PATCH /admin/faculty/bulk-status — bulk update faculty status
+export const bulkUpdateFacultyStatus = async (req, res, next) => {
+  try {
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "No IDs provided" });
+    }
+    if (!["Available", "On Leave", "Meeting"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    await User.updateMany({ _id: { $in: ids } }, { status });
+
+    // Audit log
+    AuditLog.create({
+      action: "BULK_STATUS_UPDATE",
+      performedBy: req.user?.id,
+      performedByName: "Admin",
+      targetFaculty: `${ids.length} faculty`,
+      description: `Bulk status updated to "${status}" for ${ids.length} faculty.`,
+      newValue: status,
+    }).catch(() => {});
+
+    res.status(200).json({ message: `Status updated to "${status}" for ${ids.length} faculty.` });
+  } catch (err) {
+    console.error(`[adminController/bulkUpdateFacultyStatus] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
@@ -382,11 +479,46 @@ export const updateFacultyStatus = async (req, res, next) => {
     const faculty = await User.findById(id);
     if (!faculty) return res.status(404).json({ message: "Faculty not found" });
 
+    const oldStatus = faculty.status;
     faculty.status = status;
     await faculty.save();
 
+    // Audit log
+    AuditLog.create({
+      action: "STATUS_CHANGE",
+      performedBy: req.user?.id,
+      performedByName: "Admin",
+      targetFaculty: faculty.email,
+      targetFacultyName: faculty.name,
+      description: `Changed status of ${faculty.name} (${faculty.email}) from "${oldStatus}" to "${status}".`,
+      oldValue: oldStatus,
+      newValue: status,
+    }).catch(() => {});
+
     res.status(200).json({ message: `Status updated to ${status}`, status });
   } catch (err) {
+    next(err);
+  }
+};
+
+// GET /admin/audit-logs — paginated admin action change log
+export const getAuditLogs = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const [logs, total] = await Promise.all([
+      AuditLog.find().sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      AuditLog.countDocuments(),
+    ]);
+
+    res.status(200).json({
+      logs,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+  } catch (err) {
+    console.error(`[adminController/getAuditLogs] Type: ${err.name} | ${err.message}`);
     next(err);
   }
 };
