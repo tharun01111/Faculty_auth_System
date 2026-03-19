@@ -11,6 +11,7 @@ import {
   getLoginLogs,
   getChartData,
   getRecentActivity,
+  getAdminOverview,
   adminLogout,
   getBranding,
   updateBranding,
@@ -29,6 +30,7 @@ router.post("/login", validate(loginSchema), adminLogin);
 router.post("/logout", adminLogout);
 router.post("/register", validate(adminRegisterSchema), adminRegister);
 router.get("/stats", protect, adminOnly, getAdminStats);
+router.get("/overview", protect, adminOnly, getAdminOverview);
 
 // Faculty management (admin-only)
 router.get("/faculty", protect, adminOnly, getAllFaculty);

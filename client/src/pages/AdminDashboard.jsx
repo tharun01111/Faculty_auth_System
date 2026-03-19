@@ -1,5 +1,6 @@
-import { useEffect, useState, useContext, useCallback } from "react";
+import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { AuthContext } from "../context/AuthContext";
 import api from "../services/api.js";
 import AdminLayout from "../components/AdminLayout";
@@ -155,42 +156,29 @@ const getTimeGreeting = () => {
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { name } = useContext(AuthContext);
-  const [stats, setStats] = useState(null);
-  const [chartData, setChartData] = useState(null);
-  const [lockedCount, setLockedCount] = useState(null);
-  const [activityFeed, setActivityFeed] = useState(null);
-  const [error, setError] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAll = useCallback(async (showSpinner = false) => {
-    if (showSpinner) setRefreshing(true);
-    setError(null);
-    try {
-      const [statsRes, chartRes, activityRes] = await Promise.all([
-        api.get("/admin/stats"),
-        api.get("/admin/charts"),
-        api.get("/admin/activity"),
-      ]);
-      setStats(statsRes.data);
-      setLockedCount(statsRes.data.lockedAccounts ?? 0);
-      setChartData(chartRes.data);
-      setActivityFeed(activityRes.data.logs ?? []);
-    } catch (err) {
-      setError("Failed to load dashboard data. Check your connection and try again.");
-      console.error(err);
-    } finally {
-      if (showSpinner) setRefreshing(false);
-    }
-  }, []);
+  const {
+    data,
+    isLoading: statsLoading,
+    isError,
+    error,
+    refetch: fetchAll,
+    isRefetching: refreshing
+  } = useQuery({
+    queryKey: ["adminOverview"],
+    queryFn: async () => {
+      const res = await api.get("/admin/overview");
+      return res.data;
+    },
+    refetchInterval: 30000,
+    staleTime: 60000,
+  });
 
-  useEffect(() => {
-    fetchAll();
-    const intervalId = setInterval(() => fetchAll(false), 30000);
-    return () => clearInterval(intervalId);
-  }, [fetchAll]);
-
-  const statsLoading = stats === null && !error;
-  const chartsLoading = chartData === null && !error;
+  const stats = data?.stats ?? null;
+  const chartData = data?.charts ?? null;
+  const activityFeed = data?.activity?.logs ?? null;
+  const lockedCount = stats?.lockedAccounts ?? 0;
+  const chartsLoading = statsLoading;
 
   const pieData = chartData?.accountStatus?.map((d, i) => ({
     ...d,
@@ -201,11 +189,11 @@ const AdminDashboard = () => {
     <AdminLayout pageTitle="Dashboard">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* Error Alert */}
-        {error && (
+        {isError && (
           <div className="mb-6 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <strong>Error:</strong> {error}
+              <strong>Error:</strong> {error?.response?.data?.message || "Failed to load dashboard data. Check your connection and try again."}
             </div>
           </div>
         )}

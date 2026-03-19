@@ -1,5 +1,6 @@
 import { useState, useContext, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { AuthContext } from "../context/AuthContext";
 import ThemeToggle from "./ThemeToggle";
 import LogoutButton from "./LogoutButton";
@@ -48,37 +49,56 @@ const NAV_ITEMS = [
 ];
 
 // ── Sidebar link ───────────────────────────────────────────────────────────────
-const SideNavLink = ({ to, icon: Icon, label, collapsed, onClick }) => ( // eslint-disable-line no-unused-vars
-  <NavLink
-    to={to}
-    onClick={onClick}
-    end={to === "/admin/dashboard"}
-    className={({ isActive }) =>
-      `group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
-        isActive
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-      } ${collapsed ? "justify-center" : ""}`
+const SideNavLink = ({ to, icon: Icon, label, collapsed, onClick }) => {
+  const queryClient = useQueryClient();
+
+  const handlePrefetch = () => {
+    if (to === "/admin/dashboard") {
+      queryClient.prefetchQuery({
+        queryKey: ["adminOverview"],
+        queryFn: async () => {
+          const { data } = await api.get("/admin/overview");
+          return data;
+        },
+        staleTime: 60000,
+      });
     }
-  >
-    {({ isActive }) => (
-      <>
-        <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? "text-primary-foreground" : ""}`} />
-        {!collapsed && <span className="truncate">{label}</span>}
-        {/* Tooltip on collapsed */}
-        {collapsed && (
-          <span className="pointer-events-none absolute left-full ml-3 hidden whitespace-nowrap rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-md group-hover:block z-50">
-            {label}
-          </span>
-        )}
-        {/* Active indicator dot when collapsed */}
-        {collapsed && isActive && (
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary-foreground" />
-        )}
-      </>
-    )}
-  </NavLink>
-);
+  };
+
+  return (
+    <NavLink
+      to={to}
+      onClick={onClick}
+      onMouseEnter={handlePrefetch}
+      onFocus={handlePrefetch}
+      end={to === "/admin/dashboard"}
+      className={({ isActive }) =>
+        `group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+          isActive
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        } ${collapsed ? "justify-center" : ""}`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? "text-primary-foreground" : ""}`} />
+          {!collapsed && <span className="truncate">{label}</span>}
+          {/* Tooltip on collapsed */}
+          {collapsed && (
+            <span className="pointer-events-none absolute left-full ml-3 hidden whitespace-nowrap rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-md group-hover:block z-50">
+              {label}
+            </span>
+          )}
+          {/* Active indicator dot when collapsed */}
+          {collapsed && isActive && (
+            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+          )}
+        </>
+      )}
+    </NavLink>
+  );
+};
 
 // ── Desktop Sidebar ────────────────────────────────────────────────────────────
 const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick, branding }) => (

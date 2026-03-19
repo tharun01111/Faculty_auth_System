@@ -6,6 +6,75 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sendWelcomeEmail, sendAccountUnlockedEmail } from "../services/emailService.js";
 
+export const getAdminOverview = async (req, res, next) => {
+  try {
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalFaculty,
+      lockedAccounts,
+      onLeave,
+      inMeeting,
+      recentLogins,
+      logs,
+      rawAgg,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ isLocked: true }),
+      User.countDocuments({ isLocked: false, status: "On Leave" }),
+      User.countDocuments({ isLocked: false, status: "Meeting" }),
+      Logs.countDocuments({ status: "SUCCESS", createdAt: { $gte: since24h } }),
+      Logs.find().sort({ createdAt: -1 }).limit(12).lean(),
+      Logs.aggregate([
+        { $match: { createdAt: { $gte: since7d } } },
+        {
+          $group: {
+            _id: { day: { $dateToString: { format: "%d %b", date: "$createdAt" } }, status: "$status" },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const activeAccounts = totalFaculty - lockedAccounts;
+    const available = totalFaculty - lockedAccounts - onLeave - inMeeting;
+
+    const stats = {
+      totalFaculty, lockedAccounts, activeAccounts, recentLogins, workforceStatus: { available, onLeave, inMeeting }, systemHealth: "Good",
+    };
+
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }));
+    }
+
+    const dayMap = {};
+    days.forEach((d) => { dayMap[d] = { day: d, success: 0, failure: 0 }; });
+
+    rawAgg.forEach(({ _id, count }) => {
+      if (dayMap[_id.day]) {
+        if (_id.status === "SUCCESS") dayMap[_id.day].success = count;
+        else dayMap[_id.day].failure = count;
+      }
+    });
+
+    const loginActivity = Object.values(dayMap);
+    const accountStatus = [
+      { name: "Active", value: totalFaculty - lockedAccounts },
+      { name: "Locked", value: lockedAccounts },
+    ];
+    const charts = { loginActivity, accountStatus };
+
+    res.status(200).json({ stats, charts, activity: { logs } });
+  } catch (err) {
+    console.error(`[adminController/getAdminOverview] Type: ${err.name} | ${err.message}`);
+    next(err);
+  }
+};
+
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV !== "development",
