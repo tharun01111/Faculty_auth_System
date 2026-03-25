@@ -1,8 +1,10 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import LogoutButton from "../components/LogoutButton";
 import ThemeToggle from "../components/ThemeToggle";
+import api from "../services/api.js";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -17,8 +19,11 @@ import {
   GraduationCap,
   Clock,
   User,
+  Activity,
+  ChevronDown,
 } from "lucide-react";
 
+// ── Action card definitions ──────────────────────────────────────────────────
 const actionCards = [
   {
     icon: CalendarDays,
@@ -26,6 +31,7 @@ const actionCards = [
     description: "View today's classes and weekly timetable.",
     color: "text-indigo-500",
     bg: "bg-indigo-500/10",
+    enabled: false,
   },
   {
     icon: Users,
@@ -33,6 +39,7 @@ const actionCards = [
     description: "Browse and manage your assigned students.",
     color: "text-sky-500",
     bg: "bg-sky-500/10",
+    enabled: false,
   },
   {
     icon: FileBarChart2,
@@ -40,6 +47,7 @@ const actionCards = [
     description: "Generate and download performance reports.",
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
+    enabled: false,
   },
   {
     icon: BookOpen,
@@ -47,24 +55,35 @@ const actionCards = [
     description: "Manage your course materials and syllabi.",
     color: "text-amber-500",
     bg: "bg-amber-500/10",
+    enabled: false,
   },
   {
     icon: ClipboardList,
     title: "Attendance",
-    description: "Record and review student attendance.",
+    description: "Record and review class attendance.",
     color: "text-rose-500",
     bg: "bg-rose-500/10",
+    enabled: true,
+    route: "/faculty/attendance",
   },
   {
     icon: Bell,
     title: "Announcements",
-    description: "Post updates and notices for students.",
+    description: "View updates from administration.",
     color: "text-violet-500",
     bg: "bg-violet-500/10",
+    enabled: false,
   },
 ];
 
-/** Returns "Good morning", "Good afternoon", or "Good evening" based on current hour */
+const STATUS_OPTIONS = ["Available", "On Leave", "Meeting"];
+
+const STATUS_COLORS = {
+  Available: "bg-emerald-500/15 text-emerald-600 ring-emerald-500/30",
+  Meeting: "bg-amber-500/15 text-amber-600 ring-amber-500/30",
+  "On Leave": "bg-rose-500/15 text-rose-600 ring-rose-500/30",
+};
+
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -72,12 +91,10 @@ const getGreeting = () => {
   return "Good evening";
 };
 
-/** Formats a stored ISO date string into a readable "last login" label */
 const formatLastLogin = (isoString) => {
   if (!isoString) return null;
   try {
-    const date = new Date(isoString);
-    return date.toLocaleString("en-IN", {
+    return new Date(isoString).toLocaleString("en-IN", {
       dateStyle: "medium",
       timeStyle: "short",
       timeZone: "Asia/Kolkata",
@@ -87,7 +104,12 @@ const formatLastLogin = (isoString) => {
   }
 };
 
-// ── Skeleton placeholder ──────────────────────────────────────────────────────
+const formatDate = (iso) => {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+};
+
+// ── Skeleton ─────────────────────────────────────────────────────────────────
 const StatSkeleton = () => (
   <Card className="border-border bg-card">
     <CardContent className="flex items-center gap-4 pt-6">
@@ -103,15 +125,49 @@ const StatSkeleton = () => (
 const FacultyDashboard = () => {
   const navigate = useNavigate();
   const { lastLogin, name } = useContext(AuthContext);
+
+  const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
   const greeting = getGreeting();
   const lastLoginFormatted = formatLastLogin(lastLogin);
 
-  // Simulate a quick network fetch for stats so we can demonstrate the skeleton
-  useEffect(() => {
-    const timer = setTimeout(() => setLoadingStats(false), 600);
-    return () => clearTimeout(timer);
+  const fetchStats = useCallback(async () => {
+    setLoadingStats(true);
+    try {
+      const res = await api.get("/faculty/stats");
+      setStats(res.data);
+    } catch (err) {
+      console.error("Failed to fetch dashboard stats", err);
+      // Fall back to zeros so the dashboard still renders
+      setStats({ todayClasses: 0, weekClasses: 0, status: "Available", recentActivity: [] });
+    } finally {
+      setLoadingStats(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const handleStatusChange = async (newStatus) => {
+    setStatusOpen(false);
+    if (newStatus === stats?.status) return;
+    setUpdatingStatus(true);
+    try {
+      const res = await api.patch("/faculty/status", { status: newStatus });
+      setStats((prev) => ({ ...prev, status: res.data.status }));
+      toast.success(`Status updated to "${res.data.status}"`);
+    } catch {
+      toast.error("Failed to update status.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const currentStatus = stats?.status ?? "Available";
 
   return (
     <div className="min-h-screen bg-background">
@@ -146,20 +202,63 @@ const FacultyDashboard = () => {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        {/* ── Greeting ── */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">
-            {greeting}{name ? `, ${name}` : ""} 👋
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Here is your faculty portal overview for today.
-          </p>
-          {lastLoginFormatted && (
-            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
-              Last login: <span className="font-medium text-foreground">{lastLoginFormatted}</span>
-            </div>
-          )}
+        {/* ── Greeting + Status toggle ── */}
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">
+              {greeting}{name ? `, ${name}` : ""} 👋
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Here is your faculty portal overview for today.
+            </p>
+            {lastLoginFormatted && (
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                Last login: <span className="font-medium text-foreground">{lastLoginFormatted}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Status chip + dropdown */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setStatusOpen((v) => !v)}
+              disabled={updatingStatus || loadingStats}
+              className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ring-1 transition-opacity ${
+                STATUS_COLORS[currentStatus] ?? STATUS_COLORS.Available
+              } ${updatingStatus ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:opacity-80"}`}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-current" />
+              </span>
+              {updatingStatus ? "Updating…" : currentStatus}
+              <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+            </button>
+
+            {statusOpen && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setStatusOpen(false)}
+                />
+                <div className="absolute right-0 z-20 mt-2 min-w-[140px] overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+                  {STATUS_OPTIONS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleStatusChange(s)}
+                      className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-muted ${
+                        s === currentStatus ? "font-semibold text-primary" : "text-foreground"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── Quick Stats ── */}
@@ -179,7 +278,7 @@ const FacultyDashboard = () => {
                   </span>
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Today's Classes</p>
-                    <p className="text-2xl font-bold text-foreground">0</p>
+                    <p className="text-2xl font-bold text-foreground">{stats?.todayClasses ?? 0}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -187,11 +286,11 @@ const FacultyDashboard = () => {
               <Card className="border-border bg-card">
                 <CardContent className="flex items-center gap-4 pt-6">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/10">
-                    <Users className="h-4 w-4 text-sky-500" />
+                    <Activity className="h-4 w-4 text-sky-500" />
                   </span>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Total Students</p>
-                    <p className="text-2xl font-bold text-foreground">—</p>
+                    <p className="text-xs font-medium text-muted-foreground">This Week</p>
+                    <p className="text-2xl font-bold text-foreground">{stats?.weekClasses ?? 0}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -199,11 +298,13 @@ const FacultyDashboard = () => {
               <Card className="border-border bg-card">
                 <CardContent className="flex items-center gap-4 pt-6">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-                    <FileBarChart2 className="h-4 w-4 text-emerald-500" />
+                    <GraduationCap className="h-4 w-4 text-emerald-500" />
                   </span>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Pending Reports</p>
-                    <p className="text-2xl font-bold text-foreground">—</p>
+                    <p className="text-xs font-medium text-muted-foreground">Department</p>
+                    <p className="text-sm font-semibold text-foreground mt-0.5 truncate max-w-[120px]">
+                      {stats?.department || "—"}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -216,19 +317,29 @@ const FacultyDashboard = () => {
           Quick Actions
         </h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {actionCards.map(({ icon: Icon, title, description, color, bg }) => (
+          {actionCards.map(({ icon: Icon, title, description, color, bg, enabled, route }) => (
             <button
               key={title}
-              onClick={() => {
-                if (title === "Attendance") navigate("/faculty/attendance");
-              }}
-              className="group flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              onClick={() => enabled && route && navigate(route)}
+              disabled={!enabled}
+              className={`group flex flex-col gap-3 rounded-xl border p-5 text-left shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                enabled
+                  ? "cursor-pointer border-border bg-card hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5"
+                  : "cursor-not-allowed border-border/50 bg-card/50 opacity-70"
+              }`}
             >
-              <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${bg}`}>
-                <Icon className={`h-4 w-4 ${color}`} />
-              </span>
+              <div className="flex items-center justify-between">
+                <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${bg}`}>
+                  <Icon className={`h-4 w-4 ${color}`} />
+                </span>
+                {!enabled && (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Soon
+                  </span>
+                )}
+              </div>
               <div>
-                <p className="font-semibold text-foreground transition-colors group-hover:text-primary">
+                <p className={`font-semibold text-foreground transition-colors ${enabled ? "group-hover:text-primary" : ""}`}>
                   {title}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
@@ -237,8 +348,50 @@ const FacultyDashboard = () => {
           ))}
         </div>
 
-        {/* ── Notice ── */}
-        <div className="mt-10 rounded-xl border border-border bg-muted/40 p-5">
+        {/* ── Recent Activity ── */}
+        <div className="mt-10">
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Recent Activity
+          </h3>
+          {loadingStats ? (
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-14 w-full animate-pulse rounded-xl bg-muted" />
+              ))}
+            </div>
+          ) : stats?.recentActivity?.length > 0 ? (
+            <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+              {stats.recentActivity.map((r, i) => (
+                <div key={r._id ?? i} className="flex items-center gap-4 px-5 py-3.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-[10px] font-bold text-rose-600">
+                    {r.classType?.slice(0, 3).toUpperCase() ?? "LOG"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{r.subject}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(r.date)} &bull; {r.startTime} – {r.endTime}
+                      {r.venue ? ` \u00b7 ${r.venue}` : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 py-10 text-center">
+              <ClipboardList className="h-7 w-7 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">No sessions logged yet.</p>
+              <button
+                onClick={() => navigate("/faculty/attendance")}
+                className="mt-1 rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+              >
+                Log a Session
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Announcements notice ── */}
+        <div className="mt-8 rounded-xl border border-border bg-muted/40 p-5">
           <div className="flex items-start gap-3">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <Bell className="h-3.5 w-3.5 text-primary" />

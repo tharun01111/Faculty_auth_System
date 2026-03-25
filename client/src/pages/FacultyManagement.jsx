@@ -34,15 +34,12 @@ import {
   Eye,
   Calendar,
   Mail,
-  Phone,
-  Briefcase,
   CheckSquare,
   X as XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip } from "../components/ui/tooltip";
 import { Sheet } from "../components/ui/sheet";
-import { Skeleton } from "../components/ui/skeleton";
 
 const PAGE_SIZE = 10;
 
@@ -348,7 +345,7 @@ const FacultyManagement = () => {
       const res = await api.get("/admin/faculty");
       setFaculty(res.data.faculty);
       setFiltered(res.data.faculty);
-    } catch (_err) {
+    } catch (err) {
       setError(err.response?.data?.message || "Failed to load faculty.");
     } finally {
       setLoading(false);
@@ -405,7 +402,7 @@ const FacultyManagement = () => {
         prev.map((f) => (f._id === id ? { ...f, isLocked: false, failedLogin: 0 } : f))
       );
       toast.success(res.data.message);
-    } catch (_err) {
+    } catch (err) {
       toast.error(err.response?.data?.message || "Failed to unlock.");
     } finally {
       setUnlocking(null);
@@ -420,7 +417,7 @@ const FacultyManagement = () => {
       const res = await api.delete(`/admin/faculty/${deleteTarget._id}`);
       setFaculty((prev) => prev.filter((f) => f._id !== deleteTarget._id));
       toast.success(res.data.message);
-    } catch (_err) {
+    } catch (err) {
       toast.error(err.response?.data?.message || "Failed to delete.");
     } finally {
       setDeleting(null);
@@ -438,8 +435,8 @@ const FacultyManagement = () => {
         setViewTarget(prev => ({ ...prev, status: newStatus }));
       }
       toast.success(`Status updated to ${newStatus}`);
-    } catch (_err) {
-      toast.error("Failed to update status.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update status.");
     } finally {
       setUpdatingStatus(null);
     }
@@ -454,8 +451,8 @@ const FacultyManagement = () => {
       setSelectedIds([]);
       setShowBulkDeleteConfirm(false);
       toast.success(res.data.message);
-    } catch (_err) {
-      toast.error("Bulk delete failed.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Bulk delete failed.");
     } finally {
       setBulkDeleting(false);
     }
@@ -470,8 +467,8 @@ const FacultyManagement = () => {
       setSelectedIds([]);
       setBulkStatusModal(false);
       toast.success(res.data.message);
-    } catch (_err) {
-      toast.error("Bulk status update failed.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Bulk status update failed.");
     } finally {
       setBulkUpdatingStatus(false);
     }

@@ -74,6 +74,7 @@ const AttendancePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.subject.trim()) { toast.error("Subject is required."); return; }
+    if (form.endTime <= form.startTime) { toast.error("End time must be after start time."); return; }
     setSubmitting(true);
     try {
       await api.post("/faculty/attendance", form);

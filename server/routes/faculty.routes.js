@@ -8,7 +8,7 @@ import {
   logout,
   getMe,
 } from "../controllers/userController.js";
-import { logAttendance, getMyAttendance, deleteAttendanceLog } from "../controllers/attendanceController.js";
+import { logAttendance, getMyAttendance, deleteAttendanceLog, getDashboardStats, updateMyStatus } from "../controllers/attendanceController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 import { validate } from "../middleware/validateRequest.js";
 import {
@@ -37,6 +37,12 @@ router.patch("/change-password", protect, validate(changePasswordSchema), change
 
 // Protected: Get own profile
 router.get("/me", protect, getMe);
+
+// Dashboard stats (real data from attendance)
+router.get("/stats", protect, getDashboardStats);
+
+// Status update
+router.patch("/status", protect, updateMyStatus);
 
 // Attendance (faculty, must be logged in)
 router.post("/attendance", protect, logAttendance);

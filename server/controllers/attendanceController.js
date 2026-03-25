@@ -1,6 +1,66 @@
 import Attendance from "../models/Attendance.js";
 import User from "../models/Employee.js";
 
+// GET /faculty/stats — real dashboard metrics from attendance data
+export const getDashboardStats = async (req, res, next) => {
+  try {
+    const facultyId = req.user?.id;
+
+    // Today: midnight → now in UTC
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // This week: Monday 00:00 → Sunday 23:59
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sun
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - diffToMonday);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const [todayCount, weekCount, recentLogs, facultyDoc] = await Promise.all([
+      Attendance.countDocuments({ faculty: facultyId, date: { $gte: todayStart, $lte: todayEnd } }),
+      Attendance.countDocuments({ faculty: facultyId, date: { $gte: weekStart } }),
+      Attendance.find({ faculty: facultyId }).sort({ date: -1, startTime: -1 }).limit(3).lean(),
+      User.findById(facultyId).select("status department").lean(),
+    ]);
+
+    res.status(200).json({
+      todayClasses: todayCount,
+      weekClasses: weekCount,
+      status: facultyDoc?.status ?? "Available",
+      department: facultyDoc?.department ?? "",
+      recentActivity: recentLogs,
+    });
+  } catch (err) {
+    console.error(`[attendanceController/getDashboardStats] ${err.message}`);
+    next(err);
+  }
+};
+
+// PATCH /faculty/status — faculty updates own status
+export const updateMyStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const allowed = ["Available", "On Leave", "Meeting"];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ message: `Status must be one of: ${allowed.join(", ")}` });
+    }
+    const updated = await User.findByIdAndUpdate(
+      req.user?.id,
+      { status },
+      { new: true, select: "status" }
+    );
+    if (!updated) return res.status(404).json({ message: "Faculty not found" });
+    res.status(200).json({ status: updated.status });
+  } catch (err) {
+    console.error(`[attendanceController/updateMyStatus] ${err.message}`);
+    next(err);
+  }
+};
+
 // POST /faculty/attendance — faculty logs a class session
 export const logAttendance = async (req, res, next) => {
   try {
@@ -14,6 +74,10 @@ export const logAttendance = async (req, res, next) => {
 
     if (!date || !subject || !startTime || !endTime) {
       return res.status(400).json({ message: "Date, subject, start time, and end time are required." });
+    }
+
+    if (endTime <= startTime) {
+      return res.status(400).json({ message: "End time must be after start time." });
     }
 
     const record = await Attendance.create({
