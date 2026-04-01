@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import LogoutButton from "../components/LogoutButton";
 import ThemeToggle from "../components/ThemeToggle";
+import FacultyMobileNav from "../components/FacultyMobileNav";
 import api from "../services/api.js";
 import { toast } from "sonner";
 import {
@@ -170,7 +171,7 @@ const FacultyDashboard = () => {
   const currentStatus = stats?.status ?? "Available";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0">
       {/* ── Top Nav ── */}
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
@@ -405,6 +406,8 @@ const FacultyDashboard = () => {
           </div>
         </div>
       </main>
+
+      <FacultyMobileNav />
     </div>
   );
 };

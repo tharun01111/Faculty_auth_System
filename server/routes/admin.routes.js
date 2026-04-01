@@ -17,6 +17,7 @@ import {
   updateBranding,
   updateFacultyStatus,
   getAuditLogs,
+  changeAdminPassword,
 } from "../controllers/adminController.js";
 import { getAdminAttendance } from "../controllers/attendanceController.js";
 import { register, bulkRegister } from "../controllers/userController.js";
@@ -56,5 +57,8 @@ router.get("/attendance", protect, adminOnly, getAdminAttendance);
 // Branding (GET is public for CSS vars)
 router.get("/branding", getBranding);
 router.patch("/branding", protect, adminOnly, updateBranding);
+
+// Admin personal profile
+router.patch("/change-password", protect, adminOnly, changeAdminPassword);
 
 export default router;

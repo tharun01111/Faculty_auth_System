@@ -1,9 +1,10 @@
 import { useState, useContext, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { AuthContext } from "../context/AuthContext";
 import ThemeToggle from "./ThemeToggle";
 import LogoutButton from "./LogoutButton";
+import Avatar from "./Avatar";
 import {
   School,
   LayoutDashboard,
@@ -14,8 +15,8 @@ import {
   X,
   ChevronRight,
   Search,
-  Command,
   Settings,
+  UserCircle,
 } from "lucide-react";
 import GlobalSearch from "./GlobalSearch";
 import api from "../services/api.js";
@@ -45,6 +46,11 @@ const NAV_ITEMS = [
     to: "/admin/settings",
     icon: Settings,
     label: "Settings",
+  },
+  {
+    to: "/admin/profile",
+    icon: UserCircle,
+    label: "My Profile",
   },
 ];
 
@@ -101,7 +107,7 @@ const SideNavLink = ({ to, icon: Icon, label, collapsed, onClick }) => {
 };
 
 // ── Desktop Sidebar ────────────────────────────────────────────────────────────
-const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick, branding }) => (
+const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick, branding, navigate }) => (
   <aside
     className={`hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border bg-card transition-all duration-300 ${
       collapsed ? "w-[68px]" : "w-56"
@@ -167,20 +173,25 @@ const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick, branding
     {/* Bottom: user chip + theme + logout */}
     <div className={`border-t border-border px-2 py-3 space-y-2 ${collapsed ? "flex flex-col items-center" : ""}`}>
       {!collapsed && name && (
-        <div className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-            {name.charAt(0).toUpperCase()}
-          </div>
+        <button
+          onClick={() => navigate("/admin/profile")}
+          className="flex w-full items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 hover:bg-muted transition-colors text-left"
+        >
+          <Avatar name={name} size="xs" />
           <div className="min-w-0">
             <p className="truncate text-xs font-semibold text-foreground">{name}</p>
             <p className="text-[10px] text-muted-foreground">Administrator</p>
           </div>
-        </div>
+        </button>
       )}
       {collapsed && name && (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-          {name.charAt(0).toUpperCase()}
-        </div>
+        <button
+          onClick={() => navigate("/admin/profile")}
+          className="transition-opacity hover:opacity-80"
+          title="My Profile"
+        >
+          <Avatar name={name} size="xs" />
+        </button>
       )}
       <div className={`flex gap-1 ${collapsed ? "flex-col items-center" : "items-center px-1"}`}>
         <ThemeToggle />
@@ -200,7 +211,7 @@ const DesktopSidebar = ({ collapsed, setCollapsed, name, onSearchClick, branding
 );
 
 // ── Mobile Drawer ──────────────────────────────────────────────────────────────
-const MobileDrawer = ({ open, onClose, name, branding }) => (
+const MobileDrawer = ({ open, onClose, name, branding, navigate }) => (
   <>
     {/* Overlay */}
     {open && (
@@ -246,15 +257,16 @@ const MobileDrawer = ({ open, onClose, name, branding }) => (
 
       <div className="border-t border-border px-2 py-3 space-y-2">
         {name && (
-          <div className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-              {name.charAt(0).toUpperCase()}
-            </div>
+          <button
+            onClick={() => navigate("/admin/profile")}
+            className="flex w-full items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 hover:bg-muted transition-colors text-left"
+          >
+            <Avatar name={name} size="xs" />
             <div className="min-w-0">
               <p className="truncate text-xs font-semibold text-foreground">{name}</p>
               <p className="text-[10px] text-muted-foreground">Administrator</p>
             </div>
-          </div>
+          </button>
         )}
         <div className="flex items-center gap-1 px-1">
           <ThemeToggle />
@@ -305,6 +317,7 @@ const TopBar = ({ onMenuClick, pageTitle, branding }) => (
 // ── Main Layout ────────────────────────────────────────────────────────────────
 const AdminLayout = ({ children, pageTitle = "Admin" }) => {
   const { name } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -352,10 +365,11 @@ const AdminLayout = ({ children, pageTitle = "Admin" }) => {
         name={name} 
         onSearchClick={() => setSearchOpen(true)}
         branding={branding}
+        navigate={navigate}
       />
 
       {/* Mobile drawer */}
-      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} name={name} branding={branding} />
+      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} name={name} branding={branding} navigate={navigate} />
 
       {/* Main content area — offset by sidebar width on desktop */}
       <div className={`transition-all duration-300 ${collapsed ? "lg:pl-[68px]" : "lg:pl-56"}`}>

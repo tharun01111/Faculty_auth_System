@@ -5,6 +5,8 @@ import api from "../services/api.js";
 import ThemeToggle from "../components/ThemeToggle";
 import LogoutButton from "../components/LogoutButton";
 import PasswordStrength from "../components/PasswordStrength";
+import Avatar from "../components/Avatar";
+import FacultyMobileNav from "../components/FacultyMobileNav";
 import {
   Card,
   CardContent,
@@ -15,8 +17,8 @@ import {
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
+import { toast } from "sonner";
 import {
-  User,
   ShieldCheck,
   Key,
   Lock,
@@ -24,15 +26,27 @@ import {
   EyeOff,
   ArrowLeft,
   Loader2,
-  CheckCircle2,
-  AlertCircle,
-  LogOut,
   GraduationCap,
   BookMarked,
   Laptop,
   DoorOpen,
   Hash,
 } from "lucide-react";
+
+// ── Skeleton cards for the academic portfolio ─────────────────────────────
+const PortfolioSkeleton = () => (
+  <div className="grid gap-4 sm:grid-cols-2">
+    {[0, 1, 2, 3].map((i) => (
+      <div key={i} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 animate-pulse">
+        <div className="h-8 w-8 shrink-0 rounded-lg bg-muted" />
+        <div className="flex-1 space-y-2">
+          <div className="h-2.5 w-20 rounded bg-muted" />
+          <div className="h-4 w-28 rounded bg-muted" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 export default function FacultyProfile() {
   const navigate = useNavigate();
@@ -43,30 +57,28 @@ export default function FacultyProfile() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
-  
+
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
   const [profileData, setProfileData] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     api.get("/faculty/me")
       .then(res => setProfileData(res.data))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setProfileLoading(false));
   }, []);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match");
+      toast.error("New passwords do not match");
       return;
     }
 
     if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters");
+      toast.error("New password must be at least 6 characters");
       return;
     }
 
@@ -76,12 +88,12 @@ export default function FacultyProfile() {
         currentPassword,
         newPassword,
       });
-      setSuccess(res.data.message || "Password updated successfully");
+      toast.success(res.data.message || "Password updated successfully");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to update password");
+      toast.error(err.response?.data?.message || err.message || "Failed to update password");
     } finally {
       setLoading(false);
     }
@@ -102,14 +114,12 @@ export default function FacultyProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0">
       {/* ── Top Nav ── */}
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <User className="h-4 w-4" />
-            </div>
+            <Avatar name={name} size="sm" />
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Settings
@@ -144,14 +154,14 @@ export default function FacultyProfile() {
           <div className="md:col-span-1 space-y-6">
             <Card className="border-border">
               <CardContent className="pt-6">
-                <div className="flex flex-col items-center text-center">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                    <User className="h-8 w-8 text-primary" />
-                  </div>
-                  <h2 className="text-xl font-bold text-foreground">{name || "Faculty Member"}</h2>
-                  <div className="mt-1 flex items-center justify-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                    <ShieldCheck className="h-3 w-3" />
-                    {role || "Faculty"}
+                <div className="flex flex-col items-center text-center gap-3">
+                  <Avatar name={name} size="xl" />
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground">{name || "Faculty Member"}</h2>
+                    <div className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                      <ShieldCheck className="h-3 w-3" />
+                      {role || "Faculty"}
+                    </div>
                   </div>
                 </div>
 
@@ -159,7 +169,11 @@ export default function FacultyProfile() {
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Account Status</p>
                     <p className="font-medium text-foreground flex items-center gap-1.5 mt-1">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" /> Active
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                      </span>
+                      Active
                     </p>
                   </div>
                   <div>
@@ -252,19 +266,6 @@ export default function FacultyProfile() {
                     </div>
                   </div>
 
-                  {error && (
-                    <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                      {error}
-                    </div>
-                  )}
-
-                  {success && (
-                    <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                      {success}
-                    </div>
-                  )}
 
                   <div className="flex justify-end pt-2">
                     <Button type="submit" disabled={loading} className="gap-2">
@@ -290,6 +291,7 @@ export default function FacultyProfile() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
+                {profileLoading && <PortfolioSkeleton />}
                 <div className="grid gap-4 sm:grid-cols-2">
                   {/* Qualification */}
                   <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
@@ -369,7 +371,7 @@ export default function FacultyProfile() {
                   </div>
                 )}
 
-                {!profileData && (
+                {!profileLoading && !profileData && (
                   <p className="text-xs text-muted-foreground mt-2">Portfolio details will be populated by your administrator.</p>
                 )}
               </CardContent>
@@ -377,6 +379,8 @@ export default function FacultyProfile() {
           </div>
         </div>
       </main>
+
+      <FacultyMobileNav />
     </div>
   );
 }

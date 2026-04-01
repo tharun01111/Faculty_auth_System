@@ -14,6 +14,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import LogoutButton from "../components/LogoutButton";
 import ThemeToggle from "../components/ThemeToggle";
+import FacultyMobileNav from "../components/FacultyMobileNav";
 import {
   GraduationCap,
   User,
@@ -110,7 +111,7 @@ const AttendancePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 lg:pb-0">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
@@ -286,6 +287,8 @@ const AttendancePage = () => {
           </div>
         )}
       </main>
+
+      <FacultyMobileNav />
     </div>
   );
 };
